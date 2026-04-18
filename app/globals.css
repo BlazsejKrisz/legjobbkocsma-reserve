@@ -1,0 +1,95 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Warm stone — not white, not dark */
+    --background: 35 16% 89%;
+    --foreground: 224 25% 11%;
+    --card: 35 14% 93%;
+    --card-foreground: 224 25% 11%;
+    --popover: 35 14% 93%;
+    --popover-foreground: 224 25% 11%;
+
+    /* Brand orange */
+    --primary: 24 91% 51%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Neutral surfaces */
+    --secondary: 35 12% 85%;
+    --secondary-foreground: 224 20% 20%;
+    --muted: 35 12% 85%;
+    --muted-foreground: 224 10% 46%;
+
+    /* Accent: soft orange tint for active/hover */
+    --accent: 24 80% 93%;
+    --accent-foreground: 24 91% 36%;
+
+    --destructive: 0 84% 52%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 35 14% 81%;
+    --input: 35 12% 83%;
+    --ring: 24 91% 51%;
+
+    --chart-1: 24 91% 51%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 340 75% 55%;
+
+    --radius: 0.5rem;
+
+    /* Sidebar: clearly darker warm stone */
+    --sidebar: 35 20% 83%;
+  }
+  .dark {
+    /* Base surfaces */
+    --background: 224 20% 7%;
+    --foreground: 220 15% 95%;
+    --card: 224 18% 10%;
+    --card-foreground: 220 15% 95%;
+    --popover: 224 18% 10%;
+    --popover-foreground: 220 15% 95%;
+
+    /* Brand orange (#F36B10) as primary */
+    --primary: 24 91% 51%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Surfaces */
+    --secondary: 224 14% 16%;
+    --secondary-foreground: 220 15% 90%;
+    --muted: 224 14% 15%;
+    --muted-foreground: 224 10% 58%;
+
+    /* Accent: warm orange tint for active/hover states */
+    --accent: 24 30% 14%;
+    --accent-foreground: 24 85% 65%;
+
+    --destructive: 0 65% 45%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 224 14% 19%;
+    --input: 224 14% 17%;
+    --ring: 24 91% 51%;
+
+    --chart-1: 24 91% 55%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 220 70% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+
+    /* Sidebar: slightly darker than background */
+    --sidebar: 224 22% 5%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
