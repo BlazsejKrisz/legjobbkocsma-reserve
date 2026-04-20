@@ -1,5 +1,5 @@
 import { ok, err, safeJson, dbErr } from '@/lib/api/http'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 import { PartnerReservationSchema } from '@/lib/validators/reservations'
 import { sendConfirmationEmail } from '@/lib/email/sendConfirmation'
 import { checkApiKey, validateBookingDate, validatePartySize } from '@/lib/api/publicGuard'
@@ -9,7 +9,7 @@ import { NextResponse } from 'next/server'
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Headers': 'Content-Type, X-Api-Key',
 }
 
 export async function OPTIONS() {
@@ -25,7 +25,10 @@ export async function OPTIONS() {
  */
 export async function POST(req: Request) {
   const keyErr = checkApiKey(req)
-  if (keyErr) return keyErr
+  if (keyErr) {
+    const body = await keyErr.json() as { error: string }
+    return err(body.error, { status: keyErr.status, headers: CORS })
+  }
 
   const body = await safeJson(req)
   const parsed = PartnerReservationSchema.safeParse(body)
@@ -36,9 +39,9 @@ export async function POST(req: Request) {
   const payload = parsed.data
 
   const partySizeErr = validatePartySize(payload.party_size)
-  if (partySizeErr) return partySizeErr
+  if (partySizeErr) return err('party_size must be between 1 and 500', { status: 400, headers: CORS })
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   // Resolve venue by slug
   const { data: venue, error: venueErr } = await supabase
@@ -76,7 +79,10 @@ export async function POST(req: Request) {
     payload.starts_at.slice(0, 10),
     settings.max_advance_booking_days ?? 90,
   )
-  if (dateErr) return dateErr
+  if (dateErr) {
+    const body = await dateErr.json() as { error: string }
+    return err(body.error, { status: dateErr.status, headers: CORS })
+  }
 
   // Resolve table type if code was given
   let tableTypeId: number | null = null
@@ -122,7 +128,7 @@ export async function POST(req: Request) {
 
   // Send confirmation email if auto-confirmed and customer has email
   if (rpcResult?.status === 'confirmed' && payload.customer.email) {
-    await sendConfirmationEmail({
+    const sent = await sendConfirmationEmail({
       to: payload.customer.email,
       customerName: payload.customer.full_name,
       venueName: venue.name,
@@ -132,10 +138,12 @@ export async function POST(req: Request) {
       reservationId: rpcResult.reservation_id,
     })
 
-    await supabase.rpc('mark_confirmation_email_sent', {
-      p_reservation_id: Number(rpcResult.reservation_id),
-      p_mode: 'auto',
-    })
+    if (sent) {
+      await supabase.rpc('mark_confirmation_email_sent', {
+        p_reservation_id: Number(rpcResult.reservation_id),
+        p_mode: 'auto',
+      })
+    }
   }
 
   return ok({

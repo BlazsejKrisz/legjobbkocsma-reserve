@@ -12,7 +12,22 @@ export function useOverflowQueue(venueId?: string) {
   return useQuery({
     queryKey: qk.overflow.list(venueId),
     queryFn: () => apiFetch<{ data: Reservation[] }>(`/api/overflow${params}`),
-    refetchInterval: 30_000,
+    refetchInterval: 60_000, // fallback polling — realtime handles live updates
+    staleTime: 30_000,
+  })
+}
+
+/** Lightweight count used by the sidebar badge. Shares cache with useOverflowQueue. */
+export function useOverflowCount(initialCount?: number) {
+  return useQuery({
+    queryKey: qk.overflow.list(undefined),
+    queryFn: () => apiFetch<{ data: Reservation[] }>('/api/overflow'),
+    select: (d) => d.data.length,
+    initialData: initialCount != null
+      ? { data: Array(initialCount).fill(null) as Reservation[] }
+      : undefined,
+    staleTime: 30_000,
+    refetchInterval: 60_000,
   })
 }
 

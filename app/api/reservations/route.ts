@@ -1,6 +1,6 @@
 import { ok, err, safeJson, dbErr } from '@/lib/api/http'
 import { requireAuth } from '@/lib/api/authz'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient, createClient } from '@/lib/supabase/server'
 import { CreateReservationSchema } from '@/lib/validators/reservations'
 import { canAccessVenue } from '@/lib/auth/getSession'
 import { sendConfirmationEmail } from '@/lib/email/sendConfirmation'
@@ -78,7 +78,7 @@ export async function POST(req: Request) {
     return err('Forbidden', { status: 403 })
   }
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   // get_or_create_customer requires at least email or phone
   if (!payload.customer_email && !payload.customer_phone) {
@@ -123,7 +123,7 @@ export async function POST(req: Request) {
       .eq('id', payload.venue_id)
       .single()
 
-    await sendConfirmationEmail({
+    const sent = await sendConfirmationEmail({
       to: payload.customer_email,
       customerName: payload.customer_full_name ?? 'Guest',
       venueName: venue?.name ?? '',
@@ -133,10 +133,12 @@ export async function POST(req: Request) {
       reservationId: rpcResult.reservation_id,
     })
 
-    await supabase.rpc('mark_confirmation_email_sent', {
-      p_reservation_id: Number(rpcResult.reservation_id),
-      p_mode: 'auto',
-    })
+    if (sent) {
+      await supabase.rpc('mark_confirmation_email_sent', {
+        p_reservation_id: Number(rpcResult.reservation_id),
+        p_mode: 'auto',
+      })
+    }
   }
 
   return ok({ data: rpcResult }, { status: 201 })

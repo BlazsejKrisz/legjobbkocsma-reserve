@@ -15,7 +15,7 @@ export default async function DashboardPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Overview</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Today's live snapshot — reservations, queue status, and 7-day completion rate
+          Today&apos;s live snapshot — reservations, queue status, and 7-day completion rate
         </p>
       </div>
 

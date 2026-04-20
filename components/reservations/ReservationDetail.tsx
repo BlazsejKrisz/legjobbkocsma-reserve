@@ -10,6 +10,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -191,6 +192,7 @@ function DetailContent({ reservation }: { reservation: Reservation }) {
   const [notes, setNotes] = useState(reservation.internal_notes ?? '')
   const [editingNotes, setEditingNotes] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
+  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false)
   const update = useUpdateReservation()
   const markEmailSent = useMarkConfirmationEmailSent()
   const revert = useRevertCancellation()
@@ -199,14 +201,42 @@ function DetailContent({ reservation }: { reservation: Reservation }) {
   const timeRange = formatTimeRange(reservation.starts_at, reservation.ends_at)
   const date = formatDateYYYYMMDD(reservation.starts_at)
   const assignedTables = reservation.reservation_tables?.filter((rt) => !rt.released_at) ?? []
+  const confirmCancellation = () => {
+    update.mutate(
+      { id: reservation.id, status: 'cancelled' },
+      { onSuccess: () => setCancelConfirmOpen(false) },
+    )
+  }
 
   return (
-    <div className="flex flex-col gap-5 py-4">
+    <div className="flex flex-col gap-5 px-2 py-4 sm:px-3">
       <EditReservationDialog
         reservation={reservation}
         open={editOpen}
         onClose={() => setEditOpen(false)}
       />
+      <Dialog open={cancelConfirmOpen} onOpenChange={setCancelConfirmOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Cancel reservation</DialogTitle>
+            <DialogDescription>
+              This will mark the reservation as cancelled and release any assigned tables.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setCancelConfirmOpen(false)}>
+              Back
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={update.isPending}
+              onClick={confirmCancellation}
+            >
+              {update.isPending ? 'Cancelling…' : 'Confirm cancellation'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
@@ -388,7 +418,7 @@ function DetailContent({ reservation }: { reservation: Reservation }) {
               variant="outline"
               className="text-red-400 hover:text-red-300"
               disabled={update.isPending}
-              onClick={() => update.mutate({ id: reservation.id, status: 'cancelled' })}
+              onClick={() => setCancelConfirmOpen(true)}
             >
               Cancel
             </Button>

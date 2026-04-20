@@ -1,7 +1,6 @@
 'use client'
 
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
 import {
   Dialog,
   DialogContent,
@@ -22,7 +21,7 @@ import {
 } from '@/components/ui/select'
 import { useEffect } from 'react'
 import { useCreateReservation } from '@/lib/hooks/reservations/useCreateReservation'
-import { CreateReservationSchema, type CreateReservationPayload } from '@/lib/validators/reservations'
+import type { CreateReservationPayload } from '@/lib/validators/reservations'
 import { fromLocalDateAndTimes, todayYYYYMMDD } from '@/lib/datetime'
 import type { Venue } from '@/lib/types/venue'
 import type { TableType } from '@/lib/types/table'
@@ -70,7 +69,6 @@ export function CreateReservationDialog({
     setValue,
     watch,
     reset,
-    formState: { errors },
   } = useForm<FormValues>({
     defaultValues: {
       venue_id: defaultVenueId ?? venues[0]?.id ?? '',
@@ -116,7 +114,7 @@ export function CreateReservationDialog({
     )
 
     const payload: CreateReservationPayload = {
-      venue_id: values.venue_id,
+      venue_id: Number(values.venue_id),
       starts_at,
       ends_at,
       party_size: Number(values.party_size),
@@ -125,7 +123,9 @@ export function CreateReservationDialog({
       customer_full_name: values.customer_full_name || undefined,
       customer_email: values.customer_email || undefined,
       customer_phone: values.customer_phone || undefined,
-      requested_table_type_id: values.requested_table_type_id || undefined,
+      requested_table_type_id: values.requested_table_type_id
+        ? Number(values.requested_table_type_id)
+        : undefined,
     }
 
     create.mutate(payload, {

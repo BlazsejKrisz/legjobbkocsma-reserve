@@ -53,8 +53,7 @@ function TableTypeDialog({
 
   const { register, handleSubmit, setValue, watch, formState: { errors } } =
     useForm<FormValues>({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      resolver: zodResolver(UpsertTableTypeSchema) as any,
+      resolver: zodResolver(UpsertTableTypeSchema) as never,
       defaultValues: editing
         ? { name: editing.name, code: editing.code, is_active: editing.is_active }
         : { name: '', code: 'standard', is_active: true },
@@ -74,7 +73,7 @@ function TableTypeDialog({
         <DialogHeader>
           <DialogTitle>{editing ? 'Edit table type' : 'New table type'}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-4 py-2">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-2">
           <div className="flex flex-col gap-1.5">
             <Label className="text-xs">Name</Label>
             <Input {...register('name')} className="h-9 text-sm" placeholder="e.g. Billiard table" />

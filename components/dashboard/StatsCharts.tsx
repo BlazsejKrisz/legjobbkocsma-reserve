@@ -132,14 +132,14 @@ export function StatsCharts({ daily, sources, venues, completionRate }: Props) {
                   cx="50%"
                   cy="50%"
                   outerRadius={70}
-                  label={({ name, percent }) => `${name} ${Math.round(percent * 100)}%`}
+                  label={({ name, percent }) => `${name} ${Math.round((percent ?? 0) * 100)}%`}
                   labelLine={false}
                 >
                   {sourceFormatted.map((_, i) => (
                     <Cell key={i} fill={COLORS[i % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(v: number) => [v, 'reservations']} />
+                <Tooltip formatter={(value) => [value ?? 0, 'reservations']} />
               </PieChart>
             </ResponsiveContainer>
           )}

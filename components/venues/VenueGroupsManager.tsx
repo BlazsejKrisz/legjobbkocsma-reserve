@@ -16,7 +16,7 @@ import {
   useReorderGroupMembers,
 } from '@/lib/hooks/venues/useVenueGroups'
 import { useVenues } from '@/lib/hooks/venues/useVenues'
-import type { VenueGroup, VenueGroupMember } from '@/lib/types/venueGroup'
+import type { VenueGroup } from '@/lib/types/venueGroup'
 
 // ─── Single group card ────────────────────────────────────────────────────────
 

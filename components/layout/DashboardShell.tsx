@@ -4,6 +4,7 @@ import { LogoutButton } from '@/components/logout-button'
 import ThemeToggle from '@/components/theme-switcher'
 import { SidebarContent } from './Sidebar'
 import { MobileNav } from './MobileNav'
+import { OverflowRealtimeSync } from './OverflowRealtimeSync'
 import { getSession } from '@/lib/auth/getSession'
 import { createClient } from '@/lib/supabase/server'
 
@@ -32,12 +33,16 @@ export default async function DashboardShell({
   }
 
   const overflowCount = await getOverflowCount()
+  const canSeeOverflow = session.isSuperAdmin || session.isSupport
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
+      {/* Realtime subscription — activates for roles that see the overflow queue */}
+      {canSeeOverflow && <OverflowRealtimeSync />}
+
       {/* Sidebar – desktop */}
       <aside className="hidden w-60 shrink-0 border-r border-border/60 md:flex md:flex-col">
-        <SidebarContent role={session.role} overflowCount={overflowCount} />
+        <SidebarContent role={session.role} initialOverflowCount={overflowCount} />
       </aside>
 
       {/* Main area */}
@@ -45,9 +50,9 @@ export default async function DashboardShell({
         {/* Top bar */}
         <header className="flex h-13 items-center justify-between border-b border-border/60 bg-background px-4 md:px-6" style={{ height: '52px' }}>
           <div className="flex items-center gap-3 md:hidden">
-            <MobileNav role={session.role} overflowCount={overflowCount} />
+            <MobileNav role={session.role} initialOverflowCount={overflowCount} />
             <span className="text-sm font-semibold">
-              Reserve<span className="text-primary">Ops</span>
+              Legjobb<span className="text-primary">Kocsma</span>
             </span>
           </div>
           {/* Desktop left — intentionally empty; sidebar has the brand */}

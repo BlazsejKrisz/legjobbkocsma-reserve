@@ -56,7 +56,8 @@ function StatCard({ title, value, sub, icon: Icon, variant = 'default' }: StatCa
   )
 }
 
-export async function OverviewStats({ session }: { session: UserSession }) {
+export async function OverviewStats(props: { session: UserSession }) {
+  void props
   const supabase = await createClient()
 
   const today = new Date()

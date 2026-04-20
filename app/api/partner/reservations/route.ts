@@ -1,5 +1,5 @@
 import { ok, err, safeJson } from '@/lib/api/http'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 import { PartnerReservationSchema } from '@/lib/validators/reservations'
 import { addMinutes } from 'date-fns'
 
@@ -13,7 +13,7 @@ export async function POST(req: Request) {
   const apiKey = req.headers.get('X-Api-Key')
   if (!apiKey) return err('Missing X-Api-Key', { status: 401 })
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const { data: keyRow, error: keyErr } = await supabase
     .from('partner_api_keys')

@@ -83,7 +83,7 @@ export function OpenHoursEditor({ venueId, readOnly }: Props) {
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <p className="text-xs text-muted-foreground">
         If close time is before or equal to open time, the venue is considered open overnight
-        (past midnight). These rows will show a "next day" label.
+        (past midnight). These rows will show a &quot;next day&quot; label.
       </p>
 
       <div className="rounded-md border border-border overflow-hidden">

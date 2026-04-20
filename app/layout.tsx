@@ -11,8 +11,11 @@ const defaultUrl = process.env.VERCEL_URL
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
-  title: "Reserve Ops",
+  title: "Legjobbkocsma",
   description: "Multi-venue reservation operations admin",
+  icons: {
+    icon: '/lklogo.png',
+  },
 };
 
 const geistSans = Geist({

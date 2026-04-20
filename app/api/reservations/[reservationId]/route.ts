@@ -1,6 +1,6 @@
 import { ok, err, safeJson, dbErr } from '@/lib/api/http'
 import { requireAuth, requireSupportOrAbove } from '@/lib/api/authz'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 import { canAccessVenue } from '@/lib/auth/getSession'
 import { UpdateReservationSchema } from '@/lib/validators/reservations'
 import { sendConfirmationEmail } from '@/lib/email/sendConfirmation'
@@ -27,7 +27,7 @@ async function getAndCheckAccess(
   reservationId: string,
   session: UserSession,
 ) {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const { data, error } = await supabase
     .from('reservations')
     .select('id, requested_venue_id, status')
@@ -44,7 +44,7 @@ export async function GET(_req: Request, { params }: Params) {
   if (!auth.ok) return auth.response
 
   const { reservationId } = await params
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const { data, error } = await supabase
     .from('reservations')
@@ -75,7 +75,7 @@ export async function PATCH(req: Request, { params }: Params) {
     return err('Invalid payload', { status: 400, details: parsed.error.flatten() })
   }
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const { status, cancel_note, ...rest } = parsed.data
 
   if (status === 'cancelled') {
@@ -147,7 +147,7 @@ export async function POST(req: Request, { params }: Params) {
     const reservation = await getAndCheckAccess(reservationId, auth.session)
     if (!reservation) return err('Not found or forbidden', { status: 404 })
 
-    const supabase = await createClient()
+    const supabase = createAdminClient()
 
     // Fetch full reservation details to send the email
     const { data: full } = await supabase
@@ -156,11 +156,11 @@ export async function POST(req: Request, { params }: Params) {
       .eq('id', reservationId)
       .single()
 
-    const customer = full?.customers as { full_name: string | null; email: string | null } | null
-    const venue = (full?.assigned_venue ?? full?.requested_venue) as { name: string } | null
+    const customer = full?.customers as unknown as { full_name: string | null; email: string | null } | null
+    const venue = (full?.assigned_venue ?? full?.requested_venue) as unknown as { name: string } | null
 
     if (customer?.email && full) {
-      await sendConfirmationEmail({
+      const sent = await sendConfirmationEmail({
         to: customer.email,
         customerName: customer.full_name ?? 'Guest',
         venueName: venue?.name ?? '',
@@ -169,13 +169,15 @@ export async function POST(req: Request, { params }: Params) {
         partySize: full.party_size,
         reservationId,
       })
-    }
 
-    const { error } = await supabase.rpc('mark_confirmation_email_sent', {
-      p_reservation_id: Number(reservationId),
-      p_mode: 'manual',
-    })
-    if (error) return dbErr(error, 'mark_confirmation_email_sent')
+      if (sent) {
+        const { error } = await supabase.rpc('mark_confirmation_email_sent', {
+          p_reservation_id: Number(reservationId),
+          p_mode: 'manual',
+        })
+        if (error) return dbErr(error, 'mark_confirmation_email_sent')
+      }
+    }
     return ok({ success: true })
   }
 
@@ -191,7 +193,7 @@ export async function POST(req: Request, { params }: Params) {
       return err('Reservation is not cancelled', { status: 409 })
     }
 
-    const supabase = await createClient()
+    const supabase = createAdminClient()
     const { error } = await supabase.rpc('revert_reservation_cancellation', {
       p_reservation_id: Number(reservationId),
     })

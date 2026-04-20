@@ -7,13 +7,13 @@ export async function listUsers(): Promise<UserWithRolesAndVenues[]> {
   // Fetch profiles
   const { data: profiles, error: profilesError } = await supabase
     .from('user_profiles')
-    .select('id, full_name, email, is_active, created_at')
+    .select('user_id, full_name, email, is_active, created_at')
     .order('full_name')
 
   if (profilesError) throw new Error(profilesError.message)
   if (!profiles || profiles.length === 0) return []
 
-  const userIds = profiles.map((p) => p.id)
+  const userIds = profiles.map((p) => p.user_id)
 
   // Fetch roles
   const { data: roles, error: rolesError } = await supabase
@@ -42,16 +42,20 @@ export async function listUsers(): Promise<UserWithRolesAndVenues[]> {
   for (const a of assignments ?? []) {
     if (!venuesByUser.has(a.user_id)) venuesByUser.set(a.user_id, [])
     venuesByUser.get(a.user_id)!.push({
-      id: a.venue_id,
+      id: String(a.venue_id),
       // @ts-expect-error supabase join shape
-      name: a.venues?.name ?? a.venue_id,
+      name: a.venues?.name ?? String(a.venue_id),
     })
   }
 
   return profiles.map((p) => ({
-    ...p,
-    roles: (rolesByUser.get(p.id) ?? []) as UserWithRolesAndVenues['roles'],
-    venue_ids: (venuesByUser.get(p.id) ?? []).map((v) => v.id),
-    venue_names: (venuesByUser.get(p.id) ?? []).map((v) => v.name),
+    id: p.user_id,
+    full_name: p.full_name,
+    email: p.email,
+    is_active: p.is_active,
+    created_at: p.created_at,
+    roles: (rolesByUser.get(p.user_id) ?? []) as UserWithRolesAndVenues['roles'],
+    venue_ids: (venuesByUser.get(p.user_id) ?? []).map((v) => v.id),
+    venue_names: (venuesByUser.get(p.user_id) ?? []).map((v) => v.name),
   }))
 }

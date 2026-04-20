@@ -14,7 +14,8 @@ export async function listTablesByVenue(venueId: string): Promise<Table[]> {
   return (data ?? []) as unknown as Table[]
 }
 
-export async function listTableTypesByVenue(_venueId: string): Promise<TableType[]> {
+export async function listTableTypesByVenue(venueId: string): Promise<TableType[]> {
+  void venueId
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('table_types')

@@ -525,9 +525,9 @@ $$;
 -- Worker calls these via a service-role key, but we grant to authenticated
 -- for admin-triggered retries from the UI. Actual access is gated by
 -- role-based UI logic + the RLS on the table itself.
-grant execute on function public.emit_reservation_outbox(bigint, public.integration_event_type) to authenticated;
-grant execute on function public.claim_outbox_batch(text, integer) to authenticated;
-grant execute on function public.mark_outbox_delivered(bigint) to authenticated;
-grant execute on function public.mark_outbox_failed(bigint, text, timestamptz) to authenticated;
-grant execute on function public.retry_outbox_event(bigint) to authenticated;
-grant execute on function public.get_outbox_summary(bigint) to authenticated;
+grant execute on function public.emit_reservation_outbox(bigint, public.integration_event_type) to service_role;
+grant execute on function public.claim_outbox_batch(text, integer) to service_role;
+grant execute on function public.mark_outbox_delivered(bigint) to service_role;
+grant execute on function public.mark_outbox_failed(bigint, text, timestamptz) to service_role;
+grant execute on function public.retry_outbox_event(bigint) to service_role;
+grant execute on function public.get_outbox_summary(bigint) to service_role;

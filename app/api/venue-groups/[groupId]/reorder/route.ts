@@ -1,6 +1,6 @@
 import { ok, err, safeJson, dbErr } from '@/lib/api/http'
 import { requireSuperAdmin } from '@/lib/api/authz'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 import { z } from 'zod'
 
 type Params = { params: Promise<{ groupId: string }> }
@@ -18,7 +18,7 @@ export async function POST(req: Request, { params }: Params) {
   const parsed = ReorderSchema.safeParse(body)
   if (!parsed.success) return err('Invalid payload', { status: 400 })
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const { error } = await supabase.rpc('reorder_group_members', {
     p_group_id: Number(groupId),
     p_ordered_venue_ids: parsed.data.ordered_venue_ids,

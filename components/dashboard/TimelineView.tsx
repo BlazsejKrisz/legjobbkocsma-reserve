@@ -17,7 +17,7 @@ import {
   buildHourTicks,
 } from '@/lib/datetime'
 import { STATUS_LABELS } from '@/lib/domain/reservation'
-import type { Table, TableType } from '@/lib/types/table'
+import type { TableType } from '@/lib/types/table'
 import type { Reservation } from '@/lib/types/reservation'
 import type { Venue, VenueOpenHours, Weekday } from '@/lib/types/venue'
 
@@ -137,7 +137,7 @@ export function TimelineView({ venueId, venues, tableTypes }: Props) {
 
   // ─── Click on empty slot → prefill create dialog ─────────────────────────
   const handleEmptyClick = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>, _table: Table) => {
+    (e: React.MouseEvent<HTMLDivElement>) => {
       const rect = e.currentTarget.getBoundingClientRect()
       const clickX = e.clientX - rect.left
       // Use actual rendered width (not minWidth) so % positions and clicks agree
@@ -282,7 +282,7 @@ export function TimelineView({ venueId, venues, tableTypes }: Props) {
                         key={table.id}
                         className="relative border-b border-r border-border cursor-crosshair select-none"
                         style={{ height: ROW_HEIGHT }}
-                        onClick={(e) => handleEmptyClick(e, table)}
+                        onClick={handleEmptyClick}
                       >
                         {/* Hour grid lines */}
                         {hourTicks.map((tick) => {

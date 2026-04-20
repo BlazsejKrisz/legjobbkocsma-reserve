@@ -1,5 +1,5 @@
 import { ok, err } from '@/lib/api/http'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 
 const BATCH_SIZE = 20
 
@@ -12,8 +12,8 @@ const BATCH_SIZE = 20
  *   2. Dispatch each event to the provider.
  *   3. Mark delivered or failed.
  *
- * NEVER called from the browser. Uses service-role key implicitly through
- * the Supabase client here (relies on server-side env vars).
+ * NEVER called from the browser. Uses the service-role key via the
+ * server-admin Supabase client.
  */
 export async function POST(req: Request) {
   const secret = req.headers.get('x-cron-secret')
@@ -21,7 +21,7 @@ export async function POST(req: Request) {
     return err('Unauthorized', { status: 401 })
   }
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const results: Record<string, { delivered: number; failed: number; errors: string[] }> = {}
 
   // Process known providers; extend this array as new providers are added

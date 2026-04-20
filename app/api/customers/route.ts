@@ -1,9 +1,9 @@
 import { ok, dbErr } from '@/lib/api/http'
-import { requireAuth } from '@/lib/api/authz'
-import { createClient } from '@/lib/supabase/server'
+import { requireSupportOrAbove } from '@/lib/api/authz'
+import { createAdminClient } from '@/lib/supabase/server'
 
 export async function GET(req: Request) {
-  const auth = await requireAuth()
+  const auth = await requireSupportOrAbove()
   if (!auth.ok) return auth.response
 
   const url = new URL(req.url)
@@ -11,7 +11,7 @@ export async function GET(req: Request) {
   const page = Math.max(1, Number(url.searchParams.get('page') ?? '1'))
   const pageSize = Math.min(Number(url.searchParams.get('page_size') ?? '50'), 100)
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const [listResult, countResult] = await Promise.all([
     supabase.rpc('get_customer_list', {

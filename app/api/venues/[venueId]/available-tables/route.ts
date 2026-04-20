@@ -1,6 +1,6 @@
 import { ok, err, dbErr } from '@/lib/api/http'
 import { requireSupportOrAbove } from '@/lib/api/authz'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 import { z } from 'zod'
 
 type Params = { params: Promise<{ venueId: string }> }
@@ -23,7 +23,7 @@ export async function GET(req: Request, { params }: Params) {
   })
   if (!parsed.success) return err('Invalid query params', { status: 400, details: parsed.error.flatten() })
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const { data, error } = await supabase.rpc('get_available_tables', {
     p_venue_id: Number(venueId),
     p_table_type_id: null,

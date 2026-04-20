@@ -13,10 +13,10 @@ export interface ConfirmationEmailData {
   customerServiceNote?: string
 }
 
-export async function sendConfirmationEmail(data: ConfirmationEmailData): Promise<void> {
+export async function sendConfirmationEmail(data: ConfirmationEmailData): Promise<boolean> {
   if (!process.env.RESEND_API_KEY) {
     console.warn('[email] Skipping — RESEND_API_KEY not configured')
-    return
+    return false
   }
 
   const {
@@ -43,7 +43,7 @@ export async function sendConfirmationEmail(data: ConfirmationEmailData): Promis
 <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f3f4f6;margin:0;padding:32px 16px;">
   <div style="max-width:480px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;">
     <div style="background:#18181b;padding:24px 32px;">
-      <p style="color:#a1a1aa;font-size:12px;margin:0 0 4px;text-transform:uppercase;letter-spacing:.08em;">ReserveOps</p>
+      <p style="color:#a1a1aa;font-size:12px;margin:0 0 4px;text-transform:uppercase;letter-spacing:.08em;">Legjobbkocsma</p>
       <h1 style="color:#fff;font-size:20px;margin:0;font-weight:600;">
         ${isReassignment ? 'Your reservation has been updated' : 'Reservation confirmed'}
       </h1>
@@ -90,8 +90,10 @@ export async function sendConfirmationEmail(data: ConfirmationEmailData): Promis
   try {
     await resend.emails.send({ from: EMAIL_FROM, to, subject, html })
     console.log(`[email] Confirmation sent to ${to} (reservation #${reservationId})`)
+    return true
   } catch (err) {
     // Non-fatal: log but don't throw — reservation is already confirmed
     console.error('[email] Failed to send confirmation:', err)
+    return false
   }
 }

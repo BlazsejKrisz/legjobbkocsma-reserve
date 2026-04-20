@@ -1,8 +1,8 @@
-# ReserveOps
+# Legjobbkocsma
 
 **Internal reservation management system for multi-venue hospitality operations.**
 
-ReserveOps is a full-stack web application that handles table reservations across one or more venues. It provides a staff dashboard for managing reservations, an overflow queue for handling bookings that require manual intervention, customer profile tracking, operational statistics, and a public-facing API for external booking integrations (e.g. WordPress sites).
+Legjobbkocsma is a full-stack web application that handles table reservations across one or more venues. It provides a staff dashboard for managing reservations, an overflow queue for handling bookings that require manual intervention, customer profile tracking, operational statistics, and a public-facing API for external booking integrations (e.g. WordPress sites).
 
 ---
 
@@ -306,25 +306,31 @@ Create a `.env.local` file in the project root:
 # ── Supabase (required) ────────────────────────────────────────────────────────
 NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=eyJ...
+SUPABASE_SERVICE_ROLE_KEY=eyJ...
 
 # ── Email via Resend (optional) ────────────────────────────────────────────────
 # If not set, confirmation emails are silently skipped.
 RESEND_API_KEY=re_...
-EMAIL_FROM=ReserveOps <hello@yourdomain.com>
+EMAIL_FROM=Legjobbkocsma <hello@yourdomain.com>
 
 # ── Public API key (optional) ─────────────────────────────────────────────────
 # If set, all requests to /api/public/* must include header: X-Api-Key: <value>
 # Set this on the WordPress server config — never expose it in browser JS.
 BOOKING_API_KEY=your-secret-key
+
+# ── Background jobs (required if cron/outbox is enabled) ─────────────────────
+CRON_SECRET=your-long-random-secret
 ```
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | Yes | — | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Yes | — | Supabase anon/publishable key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes | — | Server-only key for privileged RPCs and background jobs |
 | `RESEND_API_KEY` | No | — | Enables transactional email sending |
 | `EMAIL_FROM` | No | `onboarding@resend.dev` | Sender address shown to customers |
 | `BOOKING_API_KEY` | No | — | Enables API key gate on public endpoints |
+| `CRON_SECRET` | No | — | Shared secret for `/api/cron/outbox` |
 
 ---
 

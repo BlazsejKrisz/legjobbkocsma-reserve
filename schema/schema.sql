@@ -1645,7 +1645,7 @@ as $$
 declare
   v_cancelled_at timestamptz;
 begin
-  update public.reservations
+  update public.reservations r
   set
     status = 'cancelled',
     cancelled_at = now(),
@@ -1654,7 +1654,8 @@ begin
       when internal_notes is null then p_note
       else internal_notes || E'\n' || p_note
     end
-  where id = p_reservation_id and status <> 'cancelled';
+  where r.id = p_reservation_id and r.status <> 'cancelled'
+  returning r.cancelled_at into v_cancelled_at;
 
   if not found then
     raise exception 'reservation not found or already cancelled';
@@ -1665,9 +1666,6 @@ begin
   update public.reservation_tables rt
   set released_at = now()
   where rt.reservation_id = p_reservation_id and rt.released_at is null;
-
-  select r.cancelled_at into v_cancelled_at
-  from public.reservations r where r.id = p_reservation_id;
 
   insert into public.reservation_events (reservation_id, event_type, new_value)
   values (p_reservation_id, 'cancelled', jsonb_build_object('note', p_note));
@@ -2042,23 +2040,23 @@ create policy reservation_events_read on public.reservation_events
 -- Explicit grants so authenticated role can call the RPCs. Direct DML is
 -- blocked by RLS; RPCs are the only write path.
 
-grant execute on function public.create_reservation_auto(bigint, bigint, public.reservation_source, bigint, timestamptz, integer, integer, text, text, text) to authenticated;
-grant execute on function public.get_or_create_customer(text, text, text) to authenticated;
-grant execute on function public.get_available_tables(bigint, bigint, timestamptz, timestamptz, integer, text) to authenticated;
-grant execute on function public.get_available_single_table_matches(bigint, bigint, timestamptz, timestamptz, integer, text) to authenticated;
-grant execute on function public.find_best_table_combination(bigint, bigint, timestamptz, timestamptz, integer, text) to authenticated;
+grant execute on function public.create_reservation_auto(bigint, bigint, public.reservation_source, bigint, timestamptz, integer, integer, text, text, text) to service_role;
+grant execute on function public.get_or_create_customer(text, text, text) to service_role;
+grant execute on function public.get_available_tables(bigint, bigint, timestamptz, timestamptz, integer, text) to service_role;
+grant execute on function public.get_available_single_table_matches(bigint, bigint, timestamptz, timestamptz, integer, text) to service_role;
+grant execute on function public.find_best_table_combination(bigint, bigint, timestamptz, timestamptz, integer, text) to service_role;
 grant execute on function public.venue_business_window(bigint, date) to authenticated;
 grant execute on function public.is_within_venue_open_hours(bigint, timestamptz, timestamptz) to authenticated;
-grant execute on function public.get_overflow_reservations(bigint) to authenticated;
-grant execute on function public.get_reallocation_options(bigint, integer, integer) to authenticated;
-grant execute on function public.reassign_reservation(bigint, bigint, bigint[], timestamptz, boolean, text) to authenticated;
-grant execute on function public.cancel_reservation(bigint, text) to authenticated;
-grant execute on function public.mark_reservation_completed(bigint) to authenticated;
-grant execute on function public.mark_reservation_no_show(bigint) to authenticated;
-grant execute on function public.mark_confirmation_email_sent(bigint, text) to authenticated;
-grant execute on function public.create_venue_with_setup(text, text, text, text, boolean, boolean, boolean, integer, integer, integer, integer, integer, integer, integer, integer, integer, boolean, boolean) to authenticated;
-grant execute on function public.assign_user_role(uuid, public.app_role) to authenticated;
-grant execute on function public.assign_user_to_venue(uuid, bigint) to authenticated;
+grant execute on function public.get_overflow_reservations(bigint) to service_role;
+grant execute on function public.get_reallocation_options(bigint, integer, integer) to service_role;
+grant execute on function public.reassign_reservation(bigint, bigint, bigint[], timestamptz, boolean, text) to service_role;
+grant execute on function public.cancel_reservation(bigint, text) to service_role;
+grant execute on function public.mark_reservation_completed(bigint) to service_role;
+grant execute on function public.mark_reservation_no_show(bigint) to service_role;
+grant execute on function public.mark_confirmation_email_sent(bigint, text) to service_role;
+grant execute on function public.create_venue_with_setup(text, text, text, text, boolean, boolean, boolean, integer, integer, integer, integer, integer, integer, integer, integer, integer, boolean, boolean) to service_role;
+grant execute on function public.assign_user_role(uuid, public.app_role) to service_role;
+grant execute on function public.assign_user_to_venue(uuid, bigint) to service_role;
 grant execute on function public.has_role(uuid, public.app_role) to authenticated;
 grant execute on function public.is_super_admin(uuid) to authenticated;
 grant execute on function public.is_support(uuid) to authenticated;

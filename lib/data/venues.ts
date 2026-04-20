@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient, createClient } from '@/lib/supabase/server'
 import type { Venue, VenueSettings, VenueOpenHours, VenueIntegration, Weekday } from '@/lib/types/venue'
 import type { UserSession } from '@/lib/auth/getSession'
 import type { OutboxEvent, OutboxProviderSummary } from '@/lib/types/outbox'
@@ -98,7 +98,7 @@ type OutboxSummaryRow = {
 }
 
 export async function getOutboxSummary(venueId: string): Promise<OutboxProviderSummary[]> {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const { data, error } = await supabase.rpc('get_outbox_summary', {
     p_venue_id: venueId,
   })

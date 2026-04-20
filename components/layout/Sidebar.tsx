@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useOverflowCount } from '@/lib/hooks/overflow/useOverflow'
 import {
   LayoutDashboard,
   CalendarDays,
@@ -55,7 +56,7 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Venues',
     href: '/dashboard/venues',
     icon: Building2,
-    roles: ['super_admin'],
+    roles: ['super_admin', 'support'],
   },
   {
     label: 'Users',
@@ -117,7 +118,7 @@ const VENUE_NAV_ITEMS: VenueNavItem[] = [
     label: 'Table types',
     suffix: '/table-types',
     icon: Tags,
-    roles: ['super_admin'],
+    roles: ['super_admin', 'support'],
   },
   {
     label: 'Settings',
@@ -198,7 +199,7 @@ function NavLink({
 
 type SidebarProps = {
   role: AppRole
-  overflowCount?: number
+  initialOverflowCount?: number
   onClose?: () => void
 }
 
@@ -208,7 +209,9 @@ const ROLE_LABELS: Record<AppRole, string> = {
   venue_staff: 'Venue Staff',
 }
 
-export function SidebarContent({ role, overflowCount, onClose }: SidebarProps) {
+export function SidebarContent({ role, initialOverflowCount, onClose }: SidebarProps) {
+  const { data: liveCount } = useOverflowCount(initialOverflowCount)
+  const overflowCount = liveCount ?? initialOverflowCount ?? 0
   const pathname = usePathname()
   const venueId = extractVenueId(pathname)
 
@@ -230,7 +233,7 @@ export function SidebarContent({ role, overflowCount, onClose }: SidebarProps) {
             <Flame className="h-4 w-4 text-primary-foreground" />
           </div>
           <span className="text-sm font-semibold tracking-tight text-foreground">
-            Reserve<span className="text-primary">Ops</span>
+            Legjobb<span className="text-primary">Kocsma</span>
           </span>
         </Link>
         {onClose && (

@@ -1,6 +1,6 @@
 import { ok, dbErr } from '@/lib/api/http'
 import { requireSuperAdmin } from '@/lib/api/authz'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 import type { OutboxProviderSummary } from '@/lib/types/outbox'
 
 type Params = { params: Promise<{ venueId: string }> }
@@ -38,7 +38,7 @@ export async function GET(_req: Request, { params }: Params) {
   const auth = await requireSuperAdmin()
   if (!auth.ok) return auth.response
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const { data, error } = await supabase.rpc('get_outbox_summary', {
     p_venue_id: Number(venueId),
   })

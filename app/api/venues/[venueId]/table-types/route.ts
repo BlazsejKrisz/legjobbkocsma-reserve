@@ -1,5 +1,5 @@
 import { ok, err, safeJson, dbErr } from '@/lib/api/http'
-import { requireVenueAccess, requireSuperAdmin } from '@/lib/api/authz'
+import { requireVenueAccess, requireSupportOrAbove } from '@/lib/api/authz'
 import { createClient } from '@/lib/supabase/server'
 import { UpsertTableTypeSchema } from '@/lib/validators/tables'
 
@@ -21,8 +21,8 @@ export async function GET(_req: Request, { params }: Params) {
 }
 
 export async function POST(req: Request, { params }: Params) {
-  const { venueId } = await params
-  const auth = await requireSuperAdmin()
+  await params
+  const auth = await requireSupportOrAbove()
   if (!auth.ok) return auth.response
 
   const body = await safeJson(req)

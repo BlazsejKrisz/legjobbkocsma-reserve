@@ -1,4 +1,4 @@
-# ReserveOps — Public Booking API
+# Legjobbkocsma — Public Booking API
 
 This API is designed for external sites (WordPress, custom landing pages, etc.) to integrate
 live availability checking and reservation submission. No authentication is required.
@@ -343,14 +343,14 @@ document.addEventListener('DOMContentLoaded', loadVenues);
 
 ## Environment variables required
 
-These must be set on your ReserveOps deployment for the full flow to work:
+These must be set on your Legjobbkocsma deployment for the full flow to work:
 
 | Variable | Required | Description |
 |---|---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | yes | Your Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | yes | Supabase anon key |
 | `RESEND_API_KEY` | no | If not set, confirmation emails are silently skipped |
-| `EMAIL_FROM` | no | Sender address, e.g. `ReserveOps <hello@yourdomain.com>`. Defaults to `onboarding@resend.dev` (Resend test address) |
+| `EMAIL_FROM` | no | Sender address, e.g. `Legjobbkocsma <hello@yourdomain.com>`. Defaults to `onboarding@resend.dev` (Resend test address) |
 
 ---
 

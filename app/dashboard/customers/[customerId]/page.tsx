@@ -142,8 +142,8 @@ export default async function CustomerDetailPage({ params }: Params) {
               </thead>
               <tbody>
                 {reservations.map((r, idx) => {
-                  const venue = (r.assigned_venue as { id: number; name: string } | null)
-                    ?? (r.requested_venue as { id: number; name: string } | null)
+                  const venue = (r.assigned_venue as unknown as { id: number; name: string } | null)
+                    ?? (r.requested_venue as unknown as { id: number; name: string } | null)
                   const startsAt = parseISO(r.starts_at)
                   const endsAt = parseISO(r.ends_at)
                   return (

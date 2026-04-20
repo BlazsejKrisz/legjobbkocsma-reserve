@@ -14,6 +14,7 @@ export const qk = {
   overflow: {
     all: () => ['overflow'] as const,
     list: (venueId?: string) => ['overflow', 'list', venueId ?? 'all'] as const,
+    count: () => ['overflow', 'count'] as const,
     reallocation: (reservationId: string) => ['overflow', 'reallocation', reservationId] as const,
   },
   venues: {

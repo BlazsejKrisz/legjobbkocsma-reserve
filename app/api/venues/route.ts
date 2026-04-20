@@ -1,6 +1,6 @@
 import { ok, err, safeJson, dbErr } from '@/lib/api/http'
 import { requireAuth, requireSuperAdmin } from '@/lib/api/authz'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient, createClient } from '@/lib/supabase/server'
 import { CreateVenueSchema } from '@/lib/validators/venues'
 
 export async function GET() {
@@ -34,7 +34,7 @@ export async function POST(req: Request) {
     return err('Invalid payload', { status: 400, details: parsed.error.flatten() })
   }
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const { data, error } = await supabase.rpc('create_venue_with_setup', {
     p_name: parsed.data.name,

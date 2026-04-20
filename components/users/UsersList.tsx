@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -12,13 +12,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { useUsers, useAssignRole, useAssignVenue, useRemoveVenue } from '@/lib/hooks/users/useUsers'
 import { useVenues } from '@/lib/hooks/venues/useVenues'
 import type { AppRole } from '@/lib/types/user'
@@ -77,9 +70,12 @@ export function UsersList() {
 
           {users.map((user) => {
             const isExpanded = expandedId === user.id
+            const hasGlobalAccess = user.roles.some((r) =>
+              (r as AppRole) === 'super_admin' || (r as AppRole) === 'support',
+            )
             return (
-              <>
-                <TableRow key={user.id} className="h-10">
+              <Fragment key={user.id}>
+                <TableRow className="h-10">
                   <TableCell className="text-sm">
                     <p className="font-medium">{user.full_name ?? 'Unknown'}</p>
                     <p className="text-xs text-muted-foreground">{user.email}</p>
@@ -101,8 +97,10 @@ export function UsersList() {
                     </div>
                   </TableCell>
                   <TableCell className="text-xs">
-                    {user.venue_names.length === 0 ? (
-                      <span className="text-muted-foreground">All</span>
+                    {hasGlobalAccess ? (
+                      <span className="text-muted-foreground">All venues</span>
+                    ) : user.venue_names.length === 0 ? (
+                      <span className="text-muted-foreground">—</span>
                     ) : (
                       <span>{user.venue_names.join(', ')}</span>
                     )}
@@ -132,7 +130,7 @@ export function UsersList() {
                 </TableRow>
 
                 {isExpanded && (
-                  <TableRow key={`${user.id}-expand`} className="bg-muted/20">
+                  <TableRow className="bg-muted/20">
                     <TableCell colSpan={5} className="px-4 py-3">
                       <div className="flex flex-wrap gap-4">
                         {/* Role assignment */}
@@ -156,41 +154,43 @@ export function UsersList() {
                           </div>
                         </div>
 
-                        {/* Venue assignment */}
-                        <div className="flex flex-col gap-2">
-                          <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
-                            Venue access
-                          </p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {venues.map((v) => {
-                              const hasAccess = user.venue_ids.includes(v.id)
-                              return (
-                                <Button
-                                  key={v.id}
-                                  size="sm"
-                                  variant={hasAccess ? 'default' : 'outline'}
-                                  className="h-7 text-xs"
-                                  disabled={assignVenue.isPending || removeVenue.isPending}
-                                  onClick={() =>
-                                    hasAccess
-                                      ? removeVenue.mutate({ userId: user.id, venueId: v.id })
-                                      : assignVenue.mutate({ userId: user.id, venueId: v.id })
-                                  }
-                                >
-                                  {v.name}
-                                </Button>
-                              )
-                            })}
-                            {venues.length === 0 && (
-                              <span className="text-xs text-muted-foreground">No venues</span>
-                            )}
+                        {/* Venue assignment — only for venue_staff */}
+                        {!hasGlobalAccess && (
+                          <div className="flex flex-col gap-2">
+                            <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
+                              Venue access
+                            </p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {venues.map((v) => {
+                                const hasAccess = user.venue_ids.includes(v.id)
+                                return (
+                                  <Button
+                                    key={v.id}
+                                    size="sm"
+                                    variant={hasAccess ? 'default' : 'outline'}
+                                    className="h-7 text-xs"
+                                    disabled={assignVenue.isPending || removeVenue.isPending}
+                                    onClick={() =>
+                                      hasAccess
+                                        ? removeVenue.mutate({ userId: user.id, venueId: v.id })
+                                        : assignVenue.mutate({ userId: user.id, venueId: v.id })
+                                    }
+                                  >
+                                    {v.name}
+                                  </Button>
+                                )
+                              })}
+                              {venues.length === 0 && (
+                                <span className="text-xs text-muted-foreground">No venues</span>
+                              )}
+                            </div>
                           </div>
-                        </div>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
                 )}
-              </>
+              </Fragment>
             )
           })}
         </TableBody>

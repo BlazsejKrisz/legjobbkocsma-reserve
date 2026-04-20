@@ -61,7 +61,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-sm border bg-muted">
         <CardHeader className="pb-2">
           <CardTitle className="text-lg font-semibold text-center">
-            Reserve Ops
+            Legjobb<span className="text-primary">Kocsma</span>
           </CardTitle>
         </CardHeader>
 

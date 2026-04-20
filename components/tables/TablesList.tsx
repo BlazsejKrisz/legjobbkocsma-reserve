@@ -37,7 +37,6 @@ import {
   useCreateTable,
   useUpdateTable,
   useDeactivateTable,
-  useReorderTables,
 } from '@/lib/hooks/venues/useTables'
 import { UpsertTableSchema, type UpsertTablePayload } from '@/lib/validators/tables'
 import type { Table as TableRow_ } from '@/lib/types/table'

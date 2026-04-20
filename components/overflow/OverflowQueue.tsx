@@ -4,6 +4,14 @@ import { useState } from 'react'
 import { AlertTriangle, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
   Table,
   TableBody,
   TableCell,
@@ -25,13 +33,43 @@ type Props = {
 
 export function OverflowQueue({ venueId }: Props) {
   const [reassignTarget, setReassignTarget] = useState<Reservation | null>(null)
+  const [cancelTarget, setCancelTarget] = useState<Reservation | null>(null)
   const { data, isLoading, refetch, isFetching } = useOverflowQueue(venueId)
   const cancel = useUpdateReservation()
 
   const items: Reservation[] = data?.data ?? []
+  const confirmCancellation = (reservationId: string) => {
+    cancel.mutate(
+      { id: reservationId, status: 'cancelled' },
+      { onSuccess: () => setCancelTarget(null) },
+    )
+  }
 
   return (
     <div className="flex flex-col gap-4">
+      <Dialog open={!!cancelTarget} onOpenChange={(open) => !open && setCancelTarget(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Cancel reservation</DialogTitle>
+            <DialogDescription>
+              This will remove the reservation from the overflow queue and mark it as cancelled.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setCancelTarget(null)}>
+              Back
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={cancel.isPending}
+              onClick={() => cancelTarget && confirmCancellation(cancelTarget.id)}
+            >
+              {cancel.isPending ? 'Cancelling…' : 'Confirm cancellation'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -150,7 +188,7 @@ export function OverflowQueue({ venueId }: Props) {
                       variant="ghost"
                       className="h-7 text-xs text-red-400 hover:text-red-300"
                       disabled={cancel.isPending}
-                      onClick={() => cancel.mutate({ id: r.id, status: 'cancelled' })}
+                      onClick={() => setCancelTarget(r)}
                     >
                       Cancel
                     </Button>

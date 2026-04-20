@@ -12,7 +12,7 @@ export default async function TableTypesPage({ params }: Params) {
   const { venueId } = await params
   const session = await getSession()
   if (!session) redirect('/auth/login')
-  if (!session.isSuperAdmin) redirect(`/dashboard/venues/${venueId}`)
+  if (!session.isSuperAdmin && !session.isSupport) redirect(`/dashboard/venues/${venueId}`)
 
   const venue = await getVenue(venueId)
   if (!venue) notFound()

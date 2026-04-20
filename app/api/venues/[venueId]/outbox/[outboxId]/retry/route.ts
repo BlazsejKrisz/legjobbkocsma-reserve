@@ -1,6 +1,6 @@
 import { ok, err, dbErr } from '@/lib/api/http'
 import { requireSuperAdmin } from '@/lib/api/authz'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 
 type Params = { params: Promise<{ venueId: string; outboxId: string }> }
 
@@ -9,7 +9,7 @@ export async function POST(_req: Request, { params }: Params) {
   const auth = await requireSuperAdmin()
   if (!auth.ok) return auth.response
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   // Verify the outbox event belongs to this venue
   const { data: event, error: evErr } = await supabase

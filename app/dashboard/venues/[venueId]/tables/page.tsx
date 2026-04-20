@@ -33,7 +33,7 @@ export default async function TablesPage({ params }: Params) {
           <h1 className="text-lg font-semibold">Tables</h1>
           <p className="text-sm text-muted-foreground">{venue.name}</p>
         </div>
-        {session.isSuperAdmin && (
+        {(session.isSuperAdmin || session.isSupport) && (
           <Button variant="outline" size="sm" asChild>
             <Link href={`/dashboard/venues/${venueId}/table-types`}>
               Manage table types

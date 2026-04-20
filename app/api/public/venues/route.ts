@@ -1,12 +1,12 @@
 import { ok, dbErr } from '@/lib/api/http'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 import { checkApiKey } from '@/lib/api/publicGuard'
 import { NextResponse } from 'next/server'
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Headers': 'Content-Type, X-Api-Key',
 }
 
 export async function OPTIONS() {
@@ -20,9 +20,12 @@ export async function OPTIONS() {
  */
 export async function GET(req: Request) {
   const keyErr = checkApiKey(req)
-  if (keyErr) return keyErr
+  if (keyErr) {
+    const body = await keyErr.json() as { error: string }
+    return NextResponse.json(body, { status: keyErr.status, headers: CORS })
+  }
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const { data, error } = await supabase
     .from('venues')

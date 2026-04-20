@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
 import { getSession } from '@/lib/auth/getSession'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 import { listVenues } from '@/lib/data/venues'
 import { StatsCharts } from '@/components/dashboard/StatsCharts'
 import { StatsFilters } from '@/components/dashboard/StatsFilters'
@@ -46,6 +46,16 @@ function resolveRange(
 }
 
 type SearchParams = Promise<{ range?: string; from?: string; to?: string; venue_id?: string }>
+type DailyStatRow = {
+  day: string
+  total: number
+  confirmed: number
+  cancelled: number
+  no_show: number
+  completed: number
+  overflow: number
+  total_guests: number
+}
 
 export default async function StatsPage({ searchParams }: { searchParams: SearchParams }) {
   const session = await getSession()
@@ -60,7 +70,7 @@ export default async function StatsPage({ searchParams }: { searchParams: Search
   )
   const venueId = sp.venue_id ? Number(sp.venue_id) : null
 
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const [dailyResult, sourceResult, venueResult, venues] = await Promise.all([
     supabase.rpc('get_reservation_stats', {
@@ -79,11 +89,8 @@ export default async function StatsPage({ searchParams }: { searchParams: Search
 
   // Build full day series (fill in missing days with zeros)
   const rangeStart = parseISO(fromStr)
-  const dailyMap = new Map(
-    (dailyResult.data ?? []).map((r: {
-      day: string; total: number; confirmed: number; cancelled: number;
-      no_show: number; completed: number; overflow: number; total_guests: number
-    }) => [r.day, r]),
+  const dailyMap = new Map<string, DailyStatRow>(
+    ((dailyResult.data ?? []) as DailyStatRow[]).map((r) => [r.day, r]),
   )
 
   const daily = Array.from({ length: days }, (_, i) => {

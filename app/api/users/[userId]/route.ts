@@ -1,6 +1,6 @@
 import { ok, err, safeJson, dbErr } from '@/lib/api/http'
 import { requireSuperAdmin } from '@/lib/api/authz'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 import { z } from 'zod'
 
 type Params = { params: Promise<{ userId: string }> }
@@ -21,7 +21,7 @@ export async function POST(req: Request, { params }: Params) {
   const { userId } = await params
   const url = new URL(req.url)
   const action = url.searchParams.get('action')
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   if (action === 'assign_role') {
     const body = await safeJson(req)

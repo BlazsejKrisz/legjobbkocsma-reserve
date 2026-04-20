@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/auth/getSession'
 import { OverflowQueue } from '@/components/overflow/OverflowQueue'
-import { AlertTriangle, Info } from 'lucide-react'
+import { Info } from 'lucide-react'
 
 export default async function OverflowPage() {
   const session = await getSession()

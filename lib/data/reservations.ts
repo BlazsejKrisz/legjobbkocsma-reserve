@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient, createClient } from '@/lib/supabase/server'
 import type { Reservation } from '@/lib/types/reservation'
 import type { UserSession } from '@/lib/auth/getSession'
 
@@ -99,7 +99,7 @@ export async function getOverflowReservations(
 }
 
 export async function getReallocationOptions(reservationId: string) {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const { data, error } = await supabase.rpc('get_reallocation_options', {
     p_reservation_id: reservationId,
   })

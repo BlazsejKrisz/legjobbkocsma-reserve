@@ -1,6 +1,6 @@
 import { ok, err, safeJson, dbErr } from '@/lib/api/http'
 import { requireSupportOrAbove } from '@/lib/api/authz'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
 import { canAccessVenue } from '@/lib/auth/getSession'
 import { ReassignReservationSchema } from '@/lib/validators/reservations'
 import { sendConfirmationEmail } from '@/lib/email/sendConfirmation'
@@ -12,7 +12,7 @@ export async function GET(_req: Request, { params }: Params) {
   if (!auth.ok) return auth.response
 
   const { reservationId } = await params
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const { data: res, error: resError } = await supabase
     .from('reservations')
@@ -36,7 +36,7 @@ export async function POST(req: Request, { params }: Params) {
   if (!auth.ok) return auth.response
 
   const { reservationId } = await params
-  const supabase = await createClient()
+  const supabase = createAdminClient()
 
   const { data: res, error: resError } = await supabase
     .from('reservations')
@@ -82,11 +82,11 @@ export async function POST(req: Request, { params }: Params) {
       .eq('id', reservationId)
       .single()
 
-    const customer = full?.customers as { full_name: string | null; email: string | null } | null
-    const assignedVenue = full?.assigned_venue as { name: string } | null
+    const customer = full?.customers as unknown as { full_name: string | null; email: string | null } | null
+    const assignedVenue = full?.assigned_venue as unknown as { name: string } | null
 
     if (customer?.email) {
-      await sendConfirmationEmail({
+      const sent = await sendConfirmationEmail({
         to: customer.email,
         customerName: customer.full_name ?? 'Guest',
         venueName: assignedVenue?.name ?? '',
@@ -97,10 +97,13 @@ export async function POST(req: Request, { params }: Params) {
         isReassignment: true,
         customerServiceNote: parsed.data.customer_service_note,
       })
-      await supabase.rpc('mark_confirmation_email_sent', {
-        p_reservation_id: Number(reservationId),
-        p_mode: 'manual',
-      })
+
+      if (sent) {
+        await supabase.rpc('mark_confirmation_email_sent', {
+          p_reservation_id: Number(reservationId),
+          p_mode: 'manual',
+        })
+      }
     }
   }
 

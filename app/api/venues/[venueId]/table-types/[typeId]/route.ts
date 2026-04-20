@@ -1,13 +1,13 @@
 import { ok, err, safeJson, dbErr } from '@/lib/api/http'
-import { requireSuperAdmin } from '@/lib/api/authz'
+import { requireSupportOrAbove } from '@/lib/api/authz'
 import { createClient } from '@/lib/supabase/server'
 import { UpsertTableTypeSchema } from '@/lib/validators/tables'
 
 type Params = { params: Promise<{ venueId: string; typeId: string }> }
 
 export async function PATCH(req: Request, { params }: Params) {
-  const { venueId, typeId } = await params
-  const auth = await requireSuperAdmin()
+  const { typeId } = await params
+  const auth = await requireSupportOrAbove()
   if (!auth.ok) return auth.response
 
   const body = await safeJson(req)
