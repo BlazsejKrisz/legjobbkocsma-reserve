@@ -19,16 +19,15 @@ export function useOverflowQueue(venueId?: string) {
 
 /** Lightweight count used by the sidebar badge. Shares cache with useOverflowQueue. */
 export function useOverflowCount(initialCount?: number) {
-  return useQuery({
+  const { data, ...rest } = useQuery({
     queryKey: qk.overflow.list(undefined),
     queryFn: () => apiFetch<{ data: Reservation[] }>('/api/overflow'),
     select: (d) => d.data.length,
-    initialData: initialCount != null
-      ? { data: Array(initialCount).fill(null) as Reservation[] }
-      : undefined,
     staleTime: 30_000,
     refetchInterval: 60_000,
   })
+
+  return { ...rest, data: data ?? initialCount }
 }
 
 export function useReallocationOptions(reservationId: string | null) {

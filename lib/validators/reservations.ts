@@ -55,8 +55,11 @@ export type CancelReservationPayload = z.infer<typeof CancelReservationSchema>
 // Partner API (public-facing booking form)
 export const PartnerReservationSchema = z.object({
   venue_slug: z.string().min(1),
-  starts_at: z.iso.datetime(),
-  party_size: z.number().int().min(1).max(500),
+  starts_at: z.string().min(1).refine(
+    (v) => !isNaN(new Date(v).getTime()),
+    { message: 'Invalid datetime' },
+  ),
+  party_size: z.coerce.number().int().min(1).max(500),
   duration_minutes: z.number().int().min(15).max(1440).optional(),
   table_type_code: z.string().optional(),
   area: z.string().optional(),
