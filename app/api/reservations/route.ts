@@ -31,6 +31,7 @@ export async function GET(req: Request) {
   const dateFrom = url.searchParams.get('date_from') ?? undefined
   const dateTo = url.searchParams.get('date_to') ?? undefined
   const search = url.searchParams.get('search') ?? undefined
+  const sortBy = url.searchParams.get('sort_by') === 'starts_at' ? 'starts_at' : 'created_at'
   const page = Number(url.searchParams.get('page') ?? '1')
   const pageSize = Math.min(Number(url.searchParams.get('page_size') ?? '50'), 100)
 
@@ -39,7 +40,7 @@ export async function GET(req: Request) {
   let query = supabase
     .from('reservations')
     .select(RESERVATION_SELECT, { count: 'exact' })
-    .order('starts_at', { ascending: false })
+    .order(sortBy, { ascending: false })
     .range((page - 1) * pageSize, page * pageSize - 1)
 
   if (auth.session.isVenueStaff && auth.session.venueIds.length > 0) {
@@ -48,8 +49,8 @@ export async function GET(req: Request) {
   if (venueId) query = query.eq('requested_venue_id', venueId)
   if (status) query = query.eq('status', status)
   if (source) query = query.eq('source', source)
-  if (dateFrom) query = query.gte('starts_at', dateFrom)
-  if (dateTo) query = query.lte('starts_at', dateTo)
+  if (dateFrom) query = query.gte(sortBy, dateFrom)
+  if (dateTo) query = query.lte(sortBy, dateTo)
   if (search) {
     query = query.or(
       `customers.full_name.ilike.%${search}%,customers.email.ilike.%${search}%,customers.phone.ilike.%${search}%`,

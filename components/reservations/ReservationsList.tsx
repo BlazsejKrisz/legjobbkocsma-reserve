@@ -16,7 +16,7 @@ import { ReservationFilters, type ReservationFilterState, DEFAULT_FILTERS } from
 import { ReservationDetail } from './ReservationDetail'
 import { CreateReservationDialog } from './CreateReservationDialog'
 import { useReservations } from '@/lib/hooks/reservations/useReservations'
-import { formatTimeRange, formatDateYYYYMMDD, dayWindowUTC } from '@/lib/datetime'
+import { formatTimeRange, formatDateYYYYMMDD, formatTimeHHMM, dayWindowUTC } from '@/lib/datetime'
 import { SOURCE_LABELS } from '@/lib/domain/reservation'
 import type { Venue } from '@/lib/types/venue'
 import type { TableType } from '@/lib/types/table'
@@ -51,6 +51,7 @@ export function ReservationsList({
     date_from: filters.dateFrom ? dayWindowUTC(filters.dateFrom).from : undefined,
     date_to:   filters.dateTo   ? dayWindowUTC(filters.dateTo).to   : undefined,
     search: filters.search || undefined,
+    sort_by: filters.sortBy,
     page,
     page_size: PAGE_SIZE,
   })
@@ -92,7 +93,9 @@ export function ReservationsList({
         <Table>
           <TableHeader>
             <TableRow className="h-9">
-              <TableHead className="text-xs">Date & time</TableHead>
+              <TableHead className="text-xs">
+                {filters.sortBy === 'created_at' ? 'Date & time' : 'Date & time'}
+              </TableHead>
               <TableHead className="text-xs">Customer</TableHead>
               <TableHead className="text-xs">Guests</TableHead>
               {showVenueColumn && <TableHead className="text-xs">Venue</TableHead>}
@@ -129,11 +132,27 @@ export function ReservationsList({
                 onClick={() => setSelectedId(r.id)}
               >
                 <TableCell className="text-xs tabular-nums">
-                  <span className="font-medium">{formatDateYYYYMMDD(r.starts_at)}</span>
-                  <br />
-                  <span className="text-muted-foreground">
-                    {formatTimeRange(r.starts_at, r.ends_at)}
-                  </span>
+                  {filters.sortBy === 'created_at' ? (
+                    <>
+                      <span className="font-medium">{formatDateYYYYMMDD(r.starts_at)}</span>
+                      <br />
+                      <span className="text-muted-foreground">
+                        {formatTimeRange(r.starts_at, r.ends_at)}
+                      </span>
+                      <br />
+                      <span className="text-muted-foreground/60 text-[10px]">
+                        Received: {formatDateYYYYMMDD(r.created_at)} {formatTimeHHMM(r.created_at)}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="font-medium">{formatDateYYYYMMDD(r.starts_at)}</span>
+                      <br />
+                      <span className="text-muted-foreground">
+                        {formatTimeRange(r.starts_at, r.ends_at)}
+                      </span>
+                    </>
+                  )}
                 </TableCell>
                 <TableCell className="text-xs">
                   <span className="font-medium">{r.customers?.full_name ?? 'Walk-in'}</span>

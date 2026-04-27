@@ -12,6 +12,7 @@ export type ReservationListParams = {
   date_from?: string
   date_to?: string
   search?: string
+  sort_by?: 'created_at' | 'starts_at'
   page?: number
   page_size?: number
 }
@@ -31,6 +32,7 @@ export function useReservations(params: ReservationListParams = {}) {
   if (params.date_from) query.set('date_from', params.date_from)
   if (params.date_to) query.set('date_to', params.date_to)
   if (params.search) query.set('search', params.search)
+  if (params.sort_by) query.set('sort_by', params.sort_by)
   if (params.page) query.set('page', String(params.page))
   if (params.page_size) query.set('page_size', String(params.page_size))
 

@@ -20,6 +20,7 @@ import {
   Network,
   BarChart2,
   UserSquare2,
+  MonitorDot,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { AppRole } from '@/lib/types/user'
@@ -81,6 +82,12 @@ const NAV_ITEMS: NavItem[] = [
     href: '/dashboard/stats',
     icon: BarChart2,
     roles: ['super_admin', 'support'],
+  },
+  {
+    label: 'Embed Analytics',
+    href: '/dashboard/embed',
+    icon: MonitorDot,
+    roles: ['super_admin'],
   },
 ]
 

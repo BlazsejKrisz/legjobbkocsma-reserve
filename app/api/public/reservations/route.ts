@@ -1,7 +1,7 @@
 import { ok, err, safeJson, dbErr } from '@/lib/api/http'
 import { createAdminClient } from '@/lib/supabase/server'
 import { PartnerReservationSchema } from '@/lib/validators/reservations'
-import { sendConfirmationEmail } from '@/lib/email/sendConfirmation'
+import { sendConfirmationEmail, sendReceivedEmail } from '@/lib/email/sendConfirmation'
 import { checkApiKey, validateBookingDate, validatePartySize } from '@/lib/api/publicGuard'
 import { addMinutes } from 'date-fns'
 import { NextResponse } from 'next/server'
@@ -126,22 +126,33 @@ export async function POST(req: Request) {
 
   if (rpcError) return dbErr(rpcError, 'create_reservation_auto')
 
-  // Send confirmation email if auto-confirmed and customer has email
-  if (rpcResult?.status === 'confirmed' && payload.customer.email) {
-    const sent = await sendConfirmationEmail({
-      to: payload.customer.email,
-      customerName: payload.customer.full_name,
-      venueName: venue.name,
-      startsAt: startsAt.toISOString(),
-      endsAt: endsAt.toISOString(),
-      partySize: payload.party_size,
-      reservationId: rpcResult.reservation_id,
-    })
+  if (payload.customer.email) {
+    if (rpcResult?.status === 'confirmed') {
+      const sent = await sendConfirmationEmail({
+        to: payload.customer.email,
+        customerName: payload.customer.full_name,
+        venueName: venue.name,
+        startsAt: startsAt.toISOString(),
+        endsAt: endsAt.toISOString(),
+        partySize: payload.party_size,
+        reservationId: rpcResult.reservation_id,
+      })
 
-    if (sent) {
-      await supabase.rpc('mark_confirmation_email_sent', {
-        p_reservation_id: Number(rpcResult.reservation_id),
-        p_mode: 'auto',
+      if (sent) {
+        await supabase.rpc('mark_confirmation_email_sent', {
+          p_reservation_id: Number(rpcResult.reservation_id),
+          p_mode: 'auto',
+        })
+      }
+    } else if (rpcResult?.status === 'pending_manual_review') {
+      await sendReceivedEmail({
+        to: payload.customer.email,
+        customerName: payload.customer.full_name,
+        venueName: venue.name,
+        startsAt: startsAt.toISOString(),
+        endsAt: endsAt.toISOString(),
+        partySize: payload.party_size,
+        reservationId: rpcResult.reservation_id,
       })
     }
   }

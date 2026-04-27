@@ -21,6 +21,7 @@ export type ReservationFilterState = {
   dateFrom: string
   dateTo: string
   search: string
+  sortBy: 'created_at' | 'starts_at'
 }
 
 type Props = {
@@ -96,6 +97,7 @@ export const DEFAULT_FILTERS: ReservationFilterState = {
   dateFrom: '',
   dateTo: '',
   search: '',
+  sortBy: 'created_at',
 }
 
 export function ReservationFilters({ filters, venues, onChange, onReset }: Props) {
@@ -132,6 +134,24 @@ export function ReservationFilters({ filters, venues, onChange, onReset }: Props
 
   return (
     <div className="flex flex-col gap-3">
+      {/* Tabs: sort mode */}
+      <div className="flex items-center gap-1 border-b border-border pb-2">
+        {(['created_at', 'starts_at'] as const).map((mode) => (
+          <button
+            key={mode}
+            onClick={() => set({ sortBy: mode, dateFrom: '', dateTo: '' })}
+            className={[
+              'px-3 py-1 text-xs font-medium rounded-md transition-colors',
+              filters.sortBy === mode
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+            ].join(' ')}
+          >
+            {mode === 'created_at' ? 'By received' : 'By reservation'}
+          </button>
+        ))}
+      </div>
+
       {/* Row 1: search + dropdowns */}
       <div className="flex flex-wrap items-center gap-2">
         <Input
@@ -206,7 +226,7 @@ export function ReservationFilters({ filters, venues, onChange, onReset }: Props
       <div className="flex flex-wrap items-center gap-1.5">
         <span className="flex items-center gap-1 text-[11px] text-muted-foreground mr-1">
           <CalendarDays className="h-3 w-3" />
-          Date range:
+          {filters.sortBy === 'created_at' ? 'Received date:' : 'Reservation date:'}
         </span>
 
         {PRESETS.map((p) => (
