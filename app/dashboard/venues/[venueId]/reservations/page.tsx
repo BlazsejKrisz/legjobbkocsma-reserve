@@ -28,7 +28,6 @@ export default async function VenueReservationsPage({ params }: Params) {
         venues={[venue]}
         tableTypes={tableTypes}
         defaultVenueId={venueId}
-        showVenueColumn={false}
       />
     </div>
   )

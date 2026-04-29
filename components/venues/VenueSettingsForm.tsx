@@ -78,6 +78,8 @@ export function VenueSettingsForm({ venueId, readOnly }: Props) {
           hint="Shortest booking slot accepted." errors={errors} disabled={readOnly} />
         <NumberField register={register} name="max_duration_minutes" label="Max duration (min)"
           hint="Longest booking slot accepted." errors={errors} disabled={readOnly} />
+        <NumberField register={register} name="last_booking_before_close_minutes" label="Last booking before close (min)"
+          hint="Latest a booking can start before closing. Must be between min and max duration. Leave empty to use min duration." errors={errors} disabled={readOnly} />
       </Section>
 
       <Separator />

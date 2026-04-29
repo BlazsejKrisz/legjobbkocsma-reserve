@@ -94,6 +94,14 @@ export async function GET(req: Request) {
   // Verify each slot actually has capacity for the party
   const verified = (await Promise.all(
     (slots ?? []).map(async (slot: { slot_start: string; slot_end: string }) => {
+      // Filter out slots outside open hours or after the last-booking cutoff
+      const { data: withinHours } = await supabase.rpc('is_within_venue_open_hours', {
+        p_venue_id: venue.id,
+        p_starts_at: slot.slot_start,
+        p_ends_at: slot.slot_end,
+      })
+      if (!withinHours) return null
+
       const { data: match } = await supabase.rpc('get_available_single_table_matches', {
         p_venue_id: venue.id,
         p_table_type_id: null,

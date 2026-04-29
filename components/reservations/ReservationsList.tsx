@@ -25,7 +25,6 @@ type Props = {
   venues: Venue[]
   tableTypes: TableType[]
   defaultVenueId?: string
-  showVenueColumn?: boolean
 }
 
 const PAGE_SIZE = 50
@@ -34,7 +33,6 @@ export function ReservationsList({
   venues,
   tableTypes,
   defaultVenueId,
-  showVenueColumn = true,
 }: Props) {
   const [filters, setFilters] = useState<ReservationFilterState>({
     ...DEFAULT_FILTERS,
@@ -97,8 +95,8 @@ export function ReservationsList({
                 {filters.sortBy === 'created_at' ? 'Date & time' : 'Date & time'}
               </TableHead>
               <TableHead className="text-xs">Customer</TableHead>
+              <TableHead className="text-xs">Venue</TableHead>
               <TableHead className="text-xs">Guests</TableHead>
-              {showVenueColumn && <TableHead className="text-xs">Venue</TableHead>}
               <TableHead className="text-xs">Tables</TableHead>
               <TableHead className="text-xs">Source</TableHead>
               <TableHead className="text-xs">Status</TableHead>
@@ -108,7 +106,7 @@ export function ReservationsList({
             {isLoading &&
               Array.from({ length: 8 }).map((_, i) => (
                 <TableRow key={i} className="h-10">
-                  <TableCell colSpan={showVenueColumn ? 7 : 6}>
+                  <TableCell colSpan={7}>
                     <div className="h-4 w-full animate-pulse rounded bg-muted" />
                   </TableCell>
                 </TableRow>
@@ -117,7 +115,7 @@ export function ReservationsList({
             {!isLoading && reservations.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={showVenueColumn ? 7 : 6}
+                  colSpan={7}
                   className="py-8 text-center text-sm text-muted-foreground"
                 >
                   No reservations found.
@@ -163,10 +161,8 @@ export function ReservationsList({
                     </>
                   )}
                 </TableCell>
+                <TableCell className="text-xs text-muted-foreground">{r.requested_venue?.name ?? '—'}</TableCell>
                 <TableCell className="text-xs text-center">{r.party_size}</TableCell>
-                {showVenueColumn && (
-                  <TableCell className="text-xs">{r.requested_venue?.name ?? '—'}</TableCell>
-                )}
                 <TableCell className="text-xs">
                   {(() => {
                     const tables = r.reservation_tables?.filter((rt) => !rt.released_at) ?? []

@@ -39,7 +39,6 @@ export default async function ReservationsPage() {
       <ReservationsList
         venues={venues}
         tableTypes={tableTypes}
-        showVenueColumn={venues.length > 1}
       />
     </div>
   )

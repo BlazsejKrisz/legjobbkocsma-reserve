@@ -2,13 +2,59 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { hasEnvVars } from "../utils";
 
+// ─── Rate limiter for public API routes ──────────────────────────────────────
+
+const WINDOW_MS = 60_000
+const LIMITS: Record<string, number> = {
+  '/api/public/reservations': 8,
+  '/api/public/availability': 30,
+  '/api/public/track': 60,
+}
+
+const counters = new Map<string, { count: number; resetAt: number }>()
+
+function isRateLimited(ip: string, path: string): boolean {
+  const limit = Object.entries(LIMITS).find(([prefix]) => path.startsWith(prefix))?.[1]
+  if (!limit) return false
+
+  const key = `${ip}:${path}`
+  const now = Date.now()
+  const entry = counters.get(key)
+
+  if (!entry || now >= entry.resetAt) {
+    counters.set(key, { count: 1, resetAt: now + WINDOW_MS })
+    return false
+  }
+
+  entry.count += 1
+  return entry.count > limit
+}
+
 export async function updateSession(request: NextRequest) {
+  const { pathname } = request.nextUrl
+
+  if (pathname.startsWith('/api/public/')) {
+    const ip =
+      request.headers.get('x-forwarded-for')?.split(',')[0].trim() ??
+      request.headers.get('x-real-ip') ??
+      'unknown'
+
+    if (isRateLimited(ip, pathname)) {
+      return new NextResponse(JSON.stringify({ error: 'Too many requests' }), {
+        status: 429,
+        headers: {
+          'Content-Type': 'application/json',
+          'Retry-After': '60',
+          'Access-Control-Allow-Origin': '*',
+        },
+      })
+    }
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   });
 
-  // If the env vars are not set, skip proxy check. You can remove this
-  // once you setup the project.
   if (!hasEnvVars) {
     return supabaseResponse;
   }

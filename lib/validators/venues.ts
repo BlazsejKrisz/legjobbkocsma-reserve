@@ -28,6 +28,7 @@ export const VenueSettingsSchema = z.object({
   allow_cross_group_table_blending: z.boolean(),
   allow_alternative_time_suggestions: z.boolean(),
   allow_cross_venue_suggestions: z.boolean(),
+  last_booking_before_close_minutes: z.number().int().min(15).max(1440).nullable().optional(),
 })
 
 const WeekdaySchema = z.enum(WEEKDAYS as [string, ...string[]])
