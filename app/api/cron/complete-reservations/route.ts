@@ -7,7 +7,7 @@ import { createAdminClient } from '@/lib/supabase/server'
  * Called by Vercel Cron every hour.
  * Auth: CRON_SECRET header.
  */
-export async function POST(req: Request) {
+export async function GET(req: Request) {
   const auth = req.headers.get('authorization')
   if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
     return err('Unauthorized', { status: 401 })

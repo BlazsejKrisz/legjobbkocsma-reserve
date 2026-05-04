@@ -15,7 +15,7 @@ const BATCH_SIZE = 20
  * NEVER called from the browser. Uses the service-role key via the
  * server-admin Supabase client.
  */
-export async function POST(req: Request) {
+export async function GET(req: Request) {
   const auth = req.headers.get('authorization')
   if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
     return err('Unauthorized', { status: 401 })
