@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/cron/complete-reservations",
-      "schedule": "0 * * * *"
+      "schedule": "*/1 * * * *"
     },
     {
       "path": "/api/cron/outbox",
