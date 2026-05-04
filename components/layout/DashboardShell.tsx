@@ -43,12 +43,12 @@ export default async function DashboardShell({
       {canSeeOverflow && <OverflowRealtimeSync />}
 
       {/* Sidebar – desktop */}
-      <aside className="hidden w-60 shrink-0 border-r border-border/60 md:flex md:flex-col">
+      <aside className="hidden w-60 shrink-0 border-r border-border/60 md:flex md:flex-col h-screen sticky top-0 overflow-y-auto">
         <SidebarContent role={session.role} initialOverflowCount={overflowCount} canSeeOverflow={canSeeOverflow} staffVenueId={staffVenueId} />
       </aside>
 
       {/* Main area */}
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex flex-1 flex-col min-h-screen">
         {/* Top bar */}
         <header className="flex h-13 items-center justify-between border-b border-border/60 bg-background px-4 md:px-6" style={{ height: '52px' }}>
           <div className="flex items-center gap-3 md:hidden">
