@@ -33,6 +33,7 @@ import {
 import { useTableTypes, useCreateTableType, useUpdateTableType } from '@/lib/hooks/venues/useTables'
 import { UpsertTableTypeSchema, TABLE_TYPE_CODES, type UpsertTableTypePayload } from '@/lib/validators/tables'
 import type { TableType } from '@/lib/types/table'
+import { useT } from '@/lib/i18n/useT'
 
 type Props = { venueId: string }
 
@@ -47,6 +48,7 @@ function TableTypeDialog({
   editing: TableType | null
   onClose: () => void
 }) {
+  const t = useT()
   const create = useCreateTableType(venueId)
   const update = useUpdateTableType(venueId)
   const isPending = create.isPending || update.isPending
@@ -71,16 +73,16 @@ function TableTypeDialog({
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>{editing ? 'Edit table type' : 'New table type'}</DialogTitle>
+          <DialogTitle>{editing ? t.table_types.edit_type : t.table_types.new_type}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-2">
           <div className="flex flex-col gap-1.5">
-            <Label className="text-xs">Name</Label>
-            <Input {...register('name')} className="h-9 text-sm" placeholder="e.g. Billiard table" />
+            <Label className="text-xs">{t.table_types.name}</Label>
+            <Input {...register('name')} className="h-9 text-sm" placeholder={t.table_types.name_placeholder} />
             {errors.name && <p className="text-xs text-red-400">{errors.name.message}</p>}
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label className="text-xs">Code</Label>
+            <Label className="text-xs">{t.table_types.code}</Label>
             <Select
               value={watch('code')}
               onValueChange={(v: string) => setValue('code', v as UpsertTableTypePayload['code'])}
@@ -96,9 +98,9 @@ function TableTypeDialog({
             </Select>
           </div>
           <DialogFooter className="pt-2">
-            <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
+            <Button type="button" variant="ghost" onClick={onClose}>{t.common.cancel}</Button>
             <Button type="submit" disabled={isPending}>
-              {isPending ? 'Saving…' : editing ? 'Save' : 'Create'}
+              {isPending ? t.common.saving : editing ? t.common.save_short : t.common.create}
             </Button>
           </DialogFooter>
         </form>
@@ -108,6 +110,7 @@ function TableTypeDialog({
 }
 
 export function TableTypesList({ venueId }: Props) {
+  const t = useT()
   const { data, isLoading } = useTableTypes(venueId)
   const [dialogState, setDialogState] = useState<{ open: boolean; editing: TableType | null }>({
     open: false,
@@ -119,11 +122,11 @@ export function TableTypesList({ venueId }: Props) {
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          Table types control how tables are categorized and displayed.
+          {t.table_types.desc}
         </p>
         <Button size="sm" onClick={() => setDialogState({ open: true, editing: null })} className="h-8">
           <Plus className="mr-1.5 h-3.5 w-3.5" />
-          Add type
+          {t.table_types.add_type}
         </Button>
       </div>
 
@@ -131,9 +134,9 @@ export function TableTypesList({ venueId }: Props) {
         <Table>
           <TableHeader>
             <TableRow className="h-9">
-              <TableHead className="text-xs">Name</TableHead>
-              <TableHead className="text-xs">Code</TableHead>
-              <TableHead className="text-xs">Status</TableHead>
+              <TableHead className="text-xs">{t.table_types.name}</TableHead>
+              <TableHead className="text-xs">{t.table_types.code}</TableHead>
+              <TableHead className="text-xs">{t.table_types.status}</TableHead>
               <TableHead />
             </TableRow>
           </TableHeader>
@@ -146,7 +149,7 @@ export function TableTypesList({ venueId }: Props) {
             {!isLoading && types.length === 0 && (
               <TableRow>
                 <TableCell colSpan={4} className="py-8 text-center text-sm text-muted-foreground">
-                  No table types yet.
+                  {t.table_types.no_types}
                 </TableCell>
               </TableRow>
             )}
@@ -159,7 +162,7 @@ export function TableTypesList({ venueId }: Props) {
                     ? 'bg-emerald-500/15 text-emerald-400 text-[10px]'
                     : 'bg-zinc-500/15 text-zinc-400 text-[10px]'
                   }>
-                    {tt.is_active ? 'Active' : 'Inactive'}
+                    {tt.is_active ? t.table_types.active : t.table_types.inactive}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">

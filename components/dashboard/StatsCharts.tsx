@@ -14,6 +14,7 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import { format, parseISO } from 'date-fns'
+import { useT } from '@/lib/i18n/useT'
 
 type DailyRow = {
   day: string
@@ -64,7 +65,7 @@ function ChartCard({ title, children }: { title: string; children: React.ReactNo
   )
 }
 
-function CompletionGauge({ rate }: { rate: number }) {
+function CompletionGauge({ rate, subtitle }: { rate: number; subtitle: string }) {
   const clamped = Math.min(100, Math.max(0, rate))
   const color = clamped >= 70 ? '#10b981' : clamped >= 40 ? '#f59e0b' : '#ef4444'
   return (
@@ -83,7 +84,7 @@ function CompletionGauge({ rate }: { rate: number }) {
         </svg>
         <span className="text-2xl font-bold tabular-nums" style={{ color }}>{clamped}%</span>
       </div>
-      <p className="text-xs text-muted-foreground">Completion rate · last 30 days</p>
+      <p className="text-xs text-muted-foreground">{subtitle}</p>
     </div>
   )
 }
@@ -101,6 +102,8 @@ const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?:
 }
 
 export function StatsCharts({ daily, sources, venues, completionRate }: Props) {
+  const t = useT()
+
   const dailyFormatted = daily.map((d) => ({
     ...d,
     label: format(parseISO(d.day), 'MMM d'),
@@ -113,15 +116,14 @@ export function StatsCharts({ daily, sources, venues, completionRate }: Props) {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Completion rate + source breakdown */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <ChartCard title="Completion rate">
-          <CompletionGauge rate={completionRate} />
+        <ChartCard title={t.stats_charts.completion_rate}>
+          <CompletionGauge rate={completionRate} subtitle={t.stats_charts.completion_rate_subtitle} />
         </ChartCard>
 
-        <ChartCard title="Reservations by source">
+        <ChartCard title={t.stats_charts.by_source}>
           {sourceFormatted.length === 0 ? (
-            <p className="py-8 text-center text-xs text-muted-foreground">No data</p>
+            <p className="py-8 text-center text-xs text-muted-foreground">{t.stats_charts.no_data}</p>
           ) : (
             <ResponsiveContainer width="100%" height={200}>
               <PieChart>
@@ -139,15 +141,14 @@ export function StatsCharts({ daily, sources, venues, completionRate }: Props) {
                     <Cell key={i} fill={COLORS[i % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value) => [value ?? 0, 'reservations']} />
+                <Tooltip formatter={(value) => [value ?? 0, t.stats_charts.reservations_label]} />
               </PieChart>
             </ResponsiveContainer>
           )}
         </ChartCard>
       </div>
 
-      {/* Daily bar chart */}
-      <ChartCard title="Daily reservations (last 30 days)">
+      <ChartCard title={t.stats_charts.daily_reservations}>
         <ResponsiveContainer width="100%" height={240}>
           <BarChart data={dailyFormatted} barSize={8} barGap={2}>
             <CartesianGrid strokeDasharray="3 3" className="stroke-border" vertical={false} />
@@ -166,16 +167,15 @@ export function StatsCharts({ daily, sources, venues, completionRate }: Props) {
             />
             <Tooltip content={<CustomTooltip />} />
             <Legend wrapperStyle={{ fontSize: 11 }} />
-            <Bar dataKey="total" name="Total" fill="#6366f1" radius={[2, 2, 0, 0]} />
-            <Bar dataKey="confirmed" name="Confirmed" fill="#10b981" radius={[2, 2, 0, 0]} />
-            <Bar dataKey="cancelled" name="Cancelled" fill="#ef4444" radius={[2, 2, 0, 0]} />
-            <Bar dataKey="overflow" name="Overflow" fill="#f59e0b" radius={[2, 2, 0, 0]} />
+            <Bar dataKey="total" name={t.stats_charts.total} fill="#6366f1" radius={[2, 2, 0, 0]} />
+            <Bar dataKey="confirmed" name={t.stats_charts.confirmed} fill="#10b981" radius={[2, 2, 0, 0]} />
+            <Bar dataKey="cancelled" name={t.stats_charts.cancelled} fill="#ef4444" radius={[2, 2, 0, 0]} />
+            <Bar dataKey="overflow" name={t.stats_charts.overflow} fill="#f59e0b" radius={[2, 2, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </ChartCard>
 
-      {/* Guest count chart */}
-      <ChartCard title="Daily guest count (last 30 days)">
+      <ChartCard title={t.stats_charts.daily_guests}>
         <ResponsiveContainer width="100%" height={200}>
           <BarChart data={dailyFormatted} barSize={10}>
             <CartesianGrid strokeDasharray="3 3" className="stroke-border" vertical={false} />
@@ -193,14 +193,13 @@ export function StatsCharts({ daily, sources, venues, completionRate }: Props) {
               allowDecimals={false}
             />
             <Tooltip content={<CustomTooltip />} />
-            <Bar dataKey="total_guests" name="Guests" fill="#8b5cf6" radius={[2, 2, 0, 0]} />
+            <Bar dataKey="total_guests" name={t.stats_charts.guests} fill="#8b5cf6" radius={[2, 2, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </ChartCard>
 
-      {/* Venue breakdown */}
       {venues.length > 0 && (
-        <ChartCard title="Reservations by venue">
+        <ChartCard title={t.stats_charts.by_venue}>
           <ResponsiveContainer width="100%" height={Math.max(180, venues.length * 50)}>
             <BarChart data={venues} layout="vertical" barSize={14} barGap={4}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-border" horizontal={false} />
@@ -215,9 +214,9 @@ export function StatsCharts({ daily, sources, venues, completionRate }: Props) {
               />
               <Tooltip content={<CustomTooltip />} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
-              <Bar dataKey="total" name="Total" fill="#6366f1" radius={[0, 2, 2, 0]} />
-              <Bar dataKey="confirmed" name="Confirmed" fill="#10b981" radius={[0, 2, 2, 0]} />
-              <Bar dataKey="guests" name="Guests" fill="#8b5cf6" radius={[0, 2, 2, 0]} />
+              <Bar dataKey="total" name={t.stats_charts.total} fill="#6366f1" radius={[0, 2, 2, 0]} />
+              <Bar dataKey="confirmed" name={t.stats_charts.confirmed} fill="#10b981" radius={[0, 2, 2, 0]} />
+              <Bar dataKey="guests" name={t.stats_charts.guests} fill="#8b5cf6" radius={[0, 2, 2, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </ChartCard>

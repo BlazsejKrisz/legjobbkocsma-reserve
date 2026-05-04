@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { CalendarDays, X } from 'lucide-react'
+import { useT } from '@/lib/i18n/useT'
 import type { Venue } from '@/lib/types/venue'
 
 export type ReservationFilterState = {
@@ -32,31 +33,29 @@ type Props = {
 }
 
 const STATUSES = [
-  { value: 'confirmed', label: 'Confirmed' },
-  { value: 'pending_manual_review', label: 'Manual Review' },
-  { value: 'cancelled', label: 'Cancelled' },
-  { value: 'completed', label: 'Completed' },
-  { value: 'no_show', label: 'No Show' },
-]
+  'confirmed',
+  'pending_manual_review',
+  'cancelled',
+  'completed',
+  'no_show',
+] as const
 
 const SOURCES = [
-  { value: 'web', label: 'Web' },
-  { value: 'phone', label: 'Phone' },
-  { value: 'admin', label: 'Admin' },
-  { value: 'walk_in', label: 'Walk-in' },
-  { value: 'partner', label: 'Partner' },
-]
+  'web',
+  'phone',
+  'admin',
+  'walk_in',
+  'partner',
+] as const
 
 // Quick date presets — each returns { dateFrom, dateTo } as YYYY-MM-DD strings
 const TODAY = format(new Date(), 'yyyy-MM-dd')
 const PRESETS = [
   {
-    label: 'Today',
     id: 'today',
     get: () => ({ dateFrom: TODAY, dateTo: TODAY }),
   },
   {
-    label: 'Yesterday',
     id: 'yesterday',
     get: () => {
       const d = format(subDays(new Date(), 1), 'yyyy-MM-dd')
@@ -64,7 +63,6 @@ const PRESETS = [
     },
   },
   {
-    label: 'Last 7 days',
     id: '7d',
     get: () => ({
       dateFrom: format(subDays(new Date(), 6), 'yyyy-MM-dd'),
@@ -72,7 +70,6 @@ const PRESETS = [
     }),
   },
   {
-    label: 'Last 30 days',
     id: '30d',
     get: () => ({
       dateFrom: format(subDays(new Date(), 29), 'yyyy-MM-dd'),
@@ -101,6 +98,7 @@ export const DEFAULT_FILTERS: ReservationFilterState = {
 }
 
 export function ReservationFilters({ filters, venues, onChange, onReset }: Props) {
+  const t = useT()
   const [customOpen, setCustomOpen] = useState(false)
 
   const set = (patch: Partial<ReservationFilterState>) =>
@@ -147,7 +145,7 @@ export function ReservationFilters({ filters, venues, onChange, onReset }: Props
                 : 'text-muted-foreground hover:text-foreground hover:bg-muted',
             ].join(' ')}
           >
-            {mode === 'created_at' ? 'By received' : 'By reservation'}
+            {mode === 'created_at' ? t.reservations_list.by_received : t.reservations_list.by_reservation}
           </button>
         ))}
       </div>
@@ -158,7 +156,7 @@ export function ReservationFilters({ filters, venues, onChange, onReset }: Props
           defaultValue={filters.search}
           onChange={(e) => handleSearch(e.target.value)}
           className="h-8 w-48 text-xs"
-          placeholder="Search customer…"
+          placeholder={t.filters.search_placeholder}
         />
 
         {venues.length > 1 && (
@@ -167,10 +165,10 @@ export function ReservationFilters({ filters, venues, onChange, onReset }: Props
             onValueChange={(v) => set({ venueId: v === '__all' ? '' : v })}
           >
             <SelectTrigger className="h-8 w-40 text-xs">
-              <SelectValue placeholder="All venues" />
+              <SelectValue placeholder={t.filters.all_venues} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__all">All venues</SelectItem>
+              <SelectItem value="__all">{t.filters.all_venues}</SelectItem>
               {venues.map((v) => (
                 <SelectItem key={v.id} value={v.id}>
                   {v.name}
@@ -185,13 +183,13 @@ export function ReservationFilters({ filters, venues, onChange, onReset }: Props
           onValueChange={(v) => set({ status: v === '__all' ? '' : v })}
         >
           <SelectTrigger className="h-8 w-40 text-xs">
-            <SelectValue placeholder="All statuses" />
+            <SelectValue placeholder={t.filters.all_statuses} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="__all">All statuses</SelectItem>
+            <SelectItem value="__all">{t.filters.all_statuses}</SelectItem>
             {STATUSES.map((s) => (
-              <SelectItem key={s.value} value={s.value}>
-                {s.label}
+              <SelectItem key={s} value={s}>
+                {t.status[s]}
               </SelectItem>
             ))}
           </SelectContent>
@@ -202,13 +200,13 @@ export function ReservationFilters({ filters, venues, onChange, onReset }: Props
           onValueChange={(v) => set({ source: v === '__all' ? '' : v })}
         >
           <SelectTrigger className="h-8 w-36 text-xs">
-            <SelectValue placeholder="All sources" />
+            <SelectValue placeholder={t.filters.all_sources} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="__all">All sources</SelectItem>
+            <SelectItem value="__all">{t.filters.all_sources}</SelectItem>
             {SOURCES.map((s) => (
-              <SelectItem key={s.value} value={s.value}>
-                {s.label}
+              <SelectItem key={s} value={s}>
+                {t.source[s]}
               </SelectItem>
             ))}
           </SelectContent>
@@ -217,7 +215,7 @@ export function ReservationFilters({ filters, venues, onChange, onReset }: Props
         {hasActive && (
           <Button variant="ghost" size="sm" onClick={onReset} className="h-8 text-xs gap-1">
             <X className="h-3 w-3" />
-            Reset all
+            {t.filters.reset_all}
           </Button>
         )}
       </div>
@@ -226,20 +224,28 @@ export function ReservationFilters({ filters, venues, onChange, onReset }: Props
       <div className="flex flex-wrap items-center gap-1.5">
         <span className="flex items-center gap-1 text-[11px] text-muted-foreground mr-1">
           <CalendarDays className="h-3 w-3" />
-          {filters.sortBy === 'created_at' ? 'Received date:' : 'Reservation date:'}
+          {filters.sortBy === 'created_at' ? t.filters.received_date : t.filters.reservation_date}:
         </span>
 
-        {PRESETS.map((p) => (
-          <Button
-            key={p.id}
-            variant={activePreset === p.id ? 'default' : 'outline'}
-            size="sm"
-            className="h-7 text-[11px] px-2.5"
-            onClick={() => applyPreset(p.id)}
-          >
-            {p.label}
-          </Button>
-        ))}
+        {PRESETS.map((p) => {
+          const presetLabel: Record<typeof p.id, string> = {
+            today: t.filters.today,
+            yesterday: t.filters.yesterday,
+            '7d': t.filters.last_7_days,
+            '30d': t.filters.last_30_days,
+          }
+          return (
+            <Button
+              key={p.id}
+              variant={activePreset === p.id ? 'default' : 'outline'}
+              size="sm"
+              className="h-7 text-[11px] px-2.5"
+              onClick={() => applyPreset(p.id)}
+            >
+              {presetLabel[p.id]}
+            </Button>
+          )
+        })}
 
         <Button
           variant={customOpen || (hasDateFilter && !activePreset) ? 'default' : 'outline'}
@@ -247,7 +253,7 @@ export function ReservationFilters({ filters, venues, onChange, onReset }: Props
           className="h-7 text-[11px] px-2.5"
           onClick={() => setCustomOpen((o) => !o)}
         >
-          Custom range
+          {t.filters.custom_range}
         </Button>
 
         {hasDateFilter && (
@@ -258,7 +264,7 @@ export function ReservationFilters({ filters, venues, onChange, onReset }: Props
             onClick={clearDates}
           >
             <X className="h-3 w-3 mr-1" />
-            Clear dates
+            {t.filters.clear_dates}
           </Button>
         )}
       </div>
@@ -267,7 +273,7 @@ export function ReservationFilters({ filters, venues, onChange, onReset }: Props
       {(customOpen || (hasDateFilter && !activePreset)) && (
         <div className="flex flex-wrap items-center gap-2 pl-1">
           <div className="flex items-center gap-1.5">
-            <label className="text-[11px] text-muted-foreground">From</label>
+            <label className="text-[11px] text-muted-foreground">{t.filters.from}</label>
             <Input
               type="date"
               value={filters.dateFrom}
@@ -277,7 +283,7 @@ export function ReservationFilters({ filters, venues, onChange, onReset }: Props
             />
           </div>
           <div className="flex items-center gap-1.5">
-            <label className="text-[11px] text-muted-foreground">To</label>
+            <label className="text-[11px] text-muted-foreground">{t.filters.to}</label>
             <Input
               type="date"
               value={filters.dateTo}

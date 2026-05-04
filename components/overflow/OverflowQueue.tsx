@@ -24,7 +24,7 @@ import { ReassignmentDialog } from './ReassignmentDialog'
 import { useOverflowQueue } from '@/lib/hooks/overflow/useOverflow'
 import { useUpdateReservation } from '@/lib/hooks/reservations/useUpdateReservation'
 import { formatTimeRange, formatDateYYYYMMDD } from '@/lib/datetime'
-import { OVERFLOW_REASON_LABELS, SOURCE_LABELS } from '@/lib/domain/reservation'
+import { useT } from '@/lib/i18n/useT'
 import type { Reservation } from '@/lib/types/reservation'
 
 type Props = {
@@ -32,6 +32,7 @@ type Props = {
 }
 
 export function OverflowQueue({ venueId }: Props) {
+  const t = useT()
   const [reassignTarget, setReassignTarget] = useState<Reservation | null>(null)
   const [cancelTarget, setCancelTarget] = useState<Reservation | null>(null)
   const { data, isLoading, refetch, isFetching } = useOverflowQueue(venueId)
@@ -50,9 +51,9 @@ export function OverflowQueue({ venueId }: Props) {
       <Dialog open={!!cancelTarget} onOpenChange={(open) => !open && setCancelTarget(null)}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Cancel reservation</DialogTitle>
+            <DialogTitle>{t.overflow.cancel_title}</DialogTitle>
             <DialogDescription>
-              This will remove the reservation from the overflow queue and mark it as cancelled.
+              {t.overflow.cancel_description}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -64,7 +65,7 @@ export function OverflowQueue({ venueId }: Props) {
               disabled={cancel.isPending}
               onClick={() => cancelTarget && confirmCancellation(cancelTarget.id)}
             >
-              {cancel.isPending ? 'Cancelling…' : 'Confirm cancellation'}
+              {cancel.isPending ? t.detail.cancelling : t.detail.confirm_cancellation}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -74,14 +75,14 @@ export function OverflowQueue({ venueId }: Props) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <AlertTriangle className="h-4 w-4 text-amber-400" />
-          <span className="text-sm font-medium">Pending items</span>
+          <span className="text-sm font-medium">{t.overflow.pending_items}</span>
           {items.length > 0 && (
             <Badge className="bg-amber-500/15 text-amber-400 border-amber-500/30 text-[10px]">
               {items.length}
             </Badge>
           )}
           {!isLoading && items.length === 0 && (
-            <span className="text-[11px] text-muted-foreground">Queue is clear</span>
+            <span className="text-[11px] text-muted-foreground">{t.overflow.queue_clear}</span>
           )}
         </div>
         <Button
@@ -92,7 +93,7 @@ export function OverflowQueue({ venueId }: Props) {
           disabled={isFetching}
         >
           <RefreshCw className={`h-3 w-3 ${isFetching ? 'animate-spin' : ''}`} />
-          Refresh
+          {t.overflow.refresh}
         </Button>
       </div>
 
@@ -101,18 +102,18 @@ export function OverflowQueue({ venueId }: Props) {
         <Table>
           <TableHeader>
             <TableRow className="h-9">
-              <TableHead className="text-xs">Date & time</TableHead>
-              <TableHead className="text-xs">Customer</TableHead>
-              <TableHead className="text-xs">Guests</TableHead>
-              <TableHead className="text-xs">Venue</TableHead>
-              <TableHead className="text-xs">Source</TableHead>
+              <TableHead className="text-xs">{t.overflow.date_time}</TableHead>
+              <TableHead className="text-xs">{t.overflow.customer}</TableHead>
+              <TableHead className="text-xs">{t.overflow.guests}</TableHead>
+              <TableHead className="text-xs">{t.overflow.venue}</TableHead>
+              <TableHead className="text-xs">{t.overflow.source}</TableHead>
               <TableHead
                 className="text-xs"
-                title="Why the system couldn't auto-assign this reservation. Common reasons: no tables available, party too large, outside open hours."
+                title={t.overflow.overflow_reason_tooltip}
               >
-                Overflow reason ↗
+                {t.overflow.overflow_reason} ↗
               </TableHead>
-              <TableHead className="text-xs">Actions</TableHead>
+              <TableHead className="text-xs">{t.overflow.actions}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -131,7 +132,7 @@ export function OverflowQueue({ venueId }: Props) {
                   colSpan={7}
                   className="py-10 text-center text-sm text-muted-foreground"
                 >
-                  No reservations pending manual review. 🎉
+                  {t.overflow.no_pending}
                 </TableCell>
               </TableRow>
             )}
@@ -163,12 +164,12 @@ export function OverflowQueue({ venueId }: Props) {
                 <TableCell className="text-xs text-center">{r.party_size}</TableCell>
                 <TableCell className="text-xs">{r.requested_venue?.name ?? '—'}</TableCell>
                 <TableCell className="text-xs text-muted-foreground">
-                  {SOURCE_LABELS[r.source] ?? r.source}
+                  {t.source[r.source] ?? r.source}
                 </TableCell>
                 <TableCell className="text-xs max-w-36">
                   {r.overflow_reason ? (
                     <span className="text-amber-400 text-[11px]">
-                      {OVERFLOW_REASON_LABELS[r.overflow_reason] ?? r.overflow_reason}
+                      {t.overflow_reason[r.overflow_reason] ?? r.overflow_reason}
                     </span>
                   ) : (
                     <span className="text-muted-foreground">—</span>
@@ -181,7 +182,7 @@ export function OverflowQueue({ venueId }: Props) {
                       className="h-7 text-xs"
                       onClick={() => setReassignTarget(r)}
                     >
-                      Reassign
+                      {t.overflow.reassign}
                     </Button>
                     <Button
                       size="sm"
@@ -190,7 +191,7 @@ export function OverflowQueue({ venueId }: Props) {
                       disabled={cancel.isPending}
                       onClick={() => setCancelTarget(r)}
                     >
-                      Cancel
+                      {t.overflow.cancel}
                     </Button>
                   </div>
                 </TableCell>

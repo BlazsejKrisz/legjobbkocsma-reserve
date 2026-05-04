@@ -2,28 +2,27 @@ import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/auth/getSession'
 import { createAdminClient } from '@/lib/supabase/server'
 import { subDays, format } from 'date-fns'
+import { getServerT } from '@/lib/i18n/serverT'
 
 export default async function EmbedAnalyticsPage() {
   const session = await getSession()
   if (!session) redirect('/auth/login')
   if (!session.isSuperAdmin) redirect('/dashboard')
 
+  const [t] = await Promise.all([getServerT()])
   const supabase = createAdminClient()
   const since = format(subDays(new Date(), 29), 'yyyy-MM-dd')
 
   const [{ data: domainRows }, { data: eventRows }, { data: errorRows }] = await Promise.all([
-    // Per-domain summary
     supabase
       .from('embed_events')
       .select('domain, event, status')
       .gte('created_at', since),
-    // Daily event counts for sparkline
     supabase
       .from('embed_events')
       .select('event, created_at')
       .gte('created_at', since)
       .in('event', ['load', 'submit']),
-    // Error breakdown
     supabase
       .from('embed_events')
       .select('domain, reason, code')
@@ -31,7 +30,8 @@ export default async function EmbedAnalyticsPage() {
       .gte('created_at', since),
   ])
 
-  // Aggregate per domain
+  void eventRows
+
   type DomainStats = {
     loads: number
     submits: number
@@ -63,7 +63,6 @@ export default async function EmbedAnalyticsPage() {
     }))
     .sort((a, b) => b.submits - a.submits)
 
-  // Aggregate errors by reason
   type ErrorRow = { domain: string; reason: string | null; code: number | null }
   const errorMap = new Map<string, number>()
   for (const row of (errorRows ?? []) as ErrorRow[]) {
@@ -79,23 +78,32 @@ export default async function EmbedAnalyticsPage() {
   const totalErrors  = domains.reduce((s, d) => s + d.errors, 0)
   const overallRate  = totalLoads > 0 ? Math.round((totalSubmits / totalLoads) * 100) : 0
 
+  const summaryCards = [
+    { label: t.embed.form_loads,  value: totalLoads },
+    { label: t.embed.submissions, value: totalSubmits },
+    { label: t.embed.conversion,  value: `${overallRate}%` },
+    { label: t.embed.errors,      value: totalErrors },
+  ]
+
+  const tableHeaders = [
+    t.embed.domain,
+    t.embed.loads,
+    t.embed.submits,
+    t.embed.confirmed,
+    t.embed.pending,
+    t.embed.errors,
+    t.embed.conv_rate,
+  ]
+
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-lg font-semibold">Embed Analytics</h1>
-        <p className="text-sm text-muted-foreground">
-          Anonymous events from all embedded booking forms. Last 30 days.
-        </p>
+        <h1 className="text-lg font-semibold">{t.embed.title}</h1>
+        <p className="text-sm text-muted-foreground">{t.embed.subtitle}</p>
       </div>
 
-      {/* Summary cards */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {[
-          { label: 'Form loads',    value: totalLoads },
-          { label: 'Submissions',   value: totalSubmits },
-          { label: 'Conversion',    value: `${overallRate}%` },
-          { label: 'Errors',        value: totalErrors },
-        ].map(({ label, value }) => (
+        {summaryCards.map(({ label, value }) => (
           <div key={label} className="rounded-lg border border-border bg-card px-4 py-3">
             <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
               {label}
@@ -105,21 +113,20 @@ export default async function EmbedAnalyticsPage() {
         ))}
       </div>
 
-      {/* Per-domain table */}
       <div className="rounded-lg border border-border bg-card">
         <div className="px-4 py-3 border-b border-border">
-          <h2 className="text-sm font-semibold">By domain</h2>
+          <h2 className="text-sm font-semibold">{t.embed.by_domain}</h2>
         </div>
         {domains.length === 0 ? (
           <p className="px-4 py-8 text-sm text-muted-foreground text-center">
-            No embed events recorded yet.
+            {t.embed.no_events}
           </p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border text-left">
-                  {['Domain', 'Loads', 'Submits', 'Confirmed', 'Pending', 'Errors', 'Conv. rate'].map((h) => (
+                  {tableHeaders.map((h) => (
                     <th key={h} className="px-4 py-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                       {h}
                     </th>
@@ -144,18 +151,17 @@ export default async function EmbedAnalyticsPage() {
         )}
       </div>
 
-      {/* Error breakdown */}
       {errors.length > 0 && (
         <div className="rounded-lg border border-border bg-card">
           <div className="px-4 py-3 border-b border-border">
-            <h2 className="text-sm font-semibold">Error breakdown</h2>
-            <p className="text-xs text-muted-foreground">Last 30 days, all domains</p>
+            <h2 className="text-sm font-semibold">{t.embed.error_breakdown}</h2>
+            <p className="text-xs text-muted-foreground">{t.embed.error_subtitle}</p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border text-left">
-                  {['Reason', 'Count'].map((h) => (
+                  {[t.embed.reason, t.embed.count].map((h) => (
                     <th key={h} className="px-4 py-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                       {h}
                     </th>

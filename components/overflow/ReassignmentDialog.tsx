@@ -25,6 +25,7 @@ import { formatTimeRange, formatDateYYYYMMDD, toLocalDateTimeInputs, fromLocalDa
 import { OVERFLOW_REASON_LABELS } from '@/lib/domain/reservation'
 import type { Reservation, ReallocationOption } from '@/lib/types/reservation'
 import type { AvailableTable } from '@/lib/types/venueGroup'
+import { useT } from '@/lib/i18n/useT'
 
 // ─── Info field ───────────────────────────────────────────────────────────────
 
@@ -84,6 +85,7 @@ function ChangeTimePanel({
   selected: ReallocationOption | null
   onSelect: (o: ReallocationOption) => void
 }) {
+  const t = useT()
   const [showAll, setShowAll] = useState(false)
   const [showShort, setShowShort] = useState(false)
 
@@ -105,7 +107,7 @@ function ChangeTimePanel({
   if (options.length === 0) {
     return (
       <p className="py-6 text-center text-sm text-muted-foreground">
-        No alternative times available.
+        {t.reassign.no_alternative_times}
       </p>
     )
   }
@@ -120,7 +122,7 @@ function ChangeTimePanel({
       {fullOptions.length > 0 && (
         <div className="flex flex-col gap-2">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-            Available slots
+            {t.reassign.available_slots}
           </p>
           <div className="flex flex-wrap gap-2">
             {displayFull.map((opt, i) => (
@@ -139,7 +141,7 @@ function ChangeTimePanel({
               className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors self-start mt-1"
             >
               {showAll ? (
-                <><ChevronUp className="h-3 w-3" /> Show fewer</>
+                <><ChevronUp className="h-3 w-3" /> {t.reassign.show_fewer}</>
               ) : (
                 <><ChevronDown className="h-3 w-3" /> Show {fullOptions.length - 6} more</>
               )}
@@ -261,6 +263,7 @@ function TablePicker({
   partySize: number
   onToggle: (id: string) => void
 }) {
+  const t = useT()
   const { data, isLoading } = useAvailableTables(venueId, startsAt, endsAt)
   const tables: AvailableTable[] = data?.data ?? []
 
@@ -269,21 +272,21 @@ function TablePicker({
   const isUnderCapacity = selectedIds.length > 0 && totalCapacity < partySize
   const isOverCapacity = selectedIds.length > 0 && selectedTables.every((t) => t.capacity_min > partySize)
 
-  if (isLoading) return <p className="text-xs text-muted-foreground py-2">Loading tables…</p>
-  if (tables.length === 0) return <p className="text-xs text-muted-foreground py-2 italic">No tables found.</p>
+  if (isLoading) return <p className="text-xs text-muted-foreground py-2">{t.reassign.loading_tables}</p>
+  if (tables.length === 0) return <p className="text-xs text-muted-foreground py-2 italic">{t.reassign.no_tables}</p>
 
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-col gap-1.5 max-h-48 overflow-y-auto pr-1">
-        {tables.map((t) => {
-          const checked = selectedIds.includes(String(t.table_id))
-          const fitsAlone = t.capacity_min <= partySize && t.capacity_max >= partySize
-          const tooSmall = t.capacity_max < partySize
+        {tables.map((tbl) => {
+          const checked = selectedIds.includes(String(tbl.table_id))
+          const fitsAlone = tbl.capacity_min <= partySize && tbl.capacity_max >= partySize
+          const tooSmall = tbl.capacity_max < partySize
           return (
             <label
-              key={t.table_id}
+              key={tbl.table_id}
               className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm transition-colors ${
-                !t.is_free
+                !tbl.is_free
                   ? 'opacity-40 cursor-not-allowed border-border'
                   : checked
                     ? 'cursor-pointer border-ring bg-accent'
@@ -292,17 +295,17 @@ function TablePicker({
             >
               <Checkbox
                 checked={checked}
-                disabled={!t.is_free}
-                onCheckedChange={() => t.is_free && onToggle(String(t.table_id))}
+                disabled={!tbl.is_free}
+                onCheckedChange={() => tbl.is_free && onToggle(String(tbl.table_id))}
               />
               <div className="flex-1 min-w-0">
-                <span className="font-medium">{t.table_name}</span>
-                {t.area && <span className="ml-1.5 text-muted-foreground text-xs">· {t.area}</span>}
+                <span className="font-medium">{tbl.table_name}</span>
+                {tbl.area && <span className="ml-1.5 text-muted-foreground text-xs">· {tbl.area}</span>}
               </div>
               <span className={`shrink-0 text-xs tabular-nums ${fitsAlone ? 'text-muted-foreground' : tooSmall ? 'text-amber-400' : 'text-muted-foreground'}`}>
-                {t.capacity_min}–{t.capacity_max} pax
+                {tbl.capacity_min}–{tbl.capacity_max} {t.common.pax}
               </span>
-              <span className={`shrink-0 h-2 w-2 rounded-full ${t.is_free ? 'bg-green-500' : 'bg-red-500/60'}`} />
+              <span className={`shrink-0 h-2 w-2 rounded-full ${tbl.is_free ? 'bg-green-500' : 'bg-red-500/60'}`} />
             </label>
           )
         })}
@@ -347,6 +350,7 @@ function DiffRow({ label, before, after, changed }: {
 // ─── Reassign form ────────────────────────────────────────────────────────────
 
 function ReassignForm({ reservation, onClose }: { reservation: Reservation; onClose: () => void }) {
+  const t = useT()
   const { data, isLoading } = useReallocationOptions(reservation.id)
   const reassign = useReassignReservation()
   const { data: venuesData } = useVenues()
@@ -395,12 +399,12 @@ function ReassignForm({ reservation, onClose }: { reservation: Reservation; onCl
   const changeVenueGrouped = groupBy(changeVenueOptions)
 
   const OPTION_KIND_LABELS: Record<string, string> = {
-    same_venue_same_time:           'Same venue · Same time',
-    same_venue_same_time_combined:  'Same venue · Same time · Combined tables',
-    group_venue_same_time:          'Group venue',
-    group_venue_same_time_combined: 'Group venue · Combined tables',
-    other_venue_same_time:          'Other venue',
-    other_venue_same_time_combined: 'Other venue · Combined tables',
+    same_venue_same_time:           t.reassign.option_same_venue_same_time,
+    same_venue_same_time_combined:  t.reassign.option_same_venue_combined,
+    group_venue_same_time:          t.reassign.option_group_venue,
+    group_venue_same_time_combined: t.reassign.option_group_venue_combined,
+    other_venue_same_time:          t.reassign.option_other_venue,
+    other_venue_same_time_combined: t.reassign.option_other_venue_combined,
   }
 
   const toggleManualTable = (id: string) =>
@@ -465,30 +469,30 @@ function ReassignForm({ reservation, onClose }: { reservation: Reservation; onCl
     return (
       <div className="flex flex-col gap-5">
         <div>
-          <p className="text-sm font-medium text-foreground mb-1">Review changes</p>
-          <p className="text-xs text-muted-foreground">Check what will change before confirming.</p>
+          <p className="text-sm font-medium text-foreground mb-1">{t.reassign.review_changes}</p>
+          <p className="text-xs text-muted-foreground">{t.reassign.review_desc}</p>
         </div>
 
         <div className="rounded-lg border border-border bg-muted/10 px-4 py-1">
           <div className="grid grid-cols-[100px_1fr_1fr] gap-3 py-1.5 border-b border-border">
             <span />
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Before</span>
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">After</span>
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{t.reassign.before}</span>
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{t.reassign.after}</span>
           </div>
           <DiffRow
-            label="Venue"
+            label={t.reassign.venue}
             before={reservation.requested_venue?.name ?? '—'}
             after={newVenueName ?? '—'}
             changed={venueChanged}
           />
           <DiffRow
-            label="Date"
+            label={t.reassign.date}
             before={formatDateYYYYMMDD(reservation.starts_at)}
             after={formatDateYYYYMMDD(newStartsAt)}
             changed={dateChanged}
           />
           <DiffRow
-            label="Time"
+            label={t.reassign.time}
             before={formatTimeRange(reservation.starts_at, reservation.ends_at)}
             after={formatTimeRange(newStartsAt, newEndsAt)}
             changed={timeChanged}
@@ -497,21 +501,21 @@ function ReassignForm({ reservation, onClose }: { reservation: Reservation; onCl
 
         {note && (
           <div className="rounded-md bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-            <span className="font-medium text-foreground">Note to guest: </span>
+            <span className="font-medium text-foreground">{t.reassign.note_to_guest}: </span>
             {note}
           </div>
         )}
 
         {sendEmail && (
           <p className="text-xs text-amber-400">
-            Confirmation email will be sent to the guest immediately after confirming.
+            {t.reassign.email_warning}
           </p>
         )}
 
         <DialogFooter>
-          <Button variant="ghost" onClick={() => setConfirming(false)}>Back</Button>
+          <Button variant="ghost" onClick={() => setConfirming(false)}>{t.common.back}</Button>
           <Button onClick={handleCommit} disabled={reassign.isPending}>
-            {reassign.isPending ? 'Reassigning…' : 'Confirm reassignment'}
+            {reassign.isPending ? t.reassign.confirming : t.reassign.confirm}
           </Button>
         </DialogFooter>
       </div>
@@ -525,23 +529,23 @@ function ReassignForm({ reservation, onClose }: { reservation: Reservation; onCl
       {/* Reservation info */}
       <div className="rounded-lg border border-border bg-muted/20 px-4 py-3.5">
         <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3">
-          <InfoField label="Guest">
-            {reservation.customers?.full_name ?? 'Walk-in'}
+          <InfoField label={t.reassign.guest}>
+            {reservation.customers?.full_name ?? t.common.walk_in}
           </InfoField>
-          <InfoField label="Phone">
+          <InfoField label={t.reassign.phone}>
             {reservation.customers?.phone
               ? <a href={`tel:${reservation.customers.phone}`} className="hover:underline">{reservation.customers.phone}</a>
               : '—'}
           </InfoField>
-          <InfoField label="Email">
+          <InfoField label={t.reassign.email}>
             {reservation.customers?.email ?? '—'}
           </InfoField>
-          <InfoField label="Party size">{reservation.party_size} pax</InfoField>
-          <InfoField label="Date">{formatDateYYYYMMDD(reservation.starts_at)}</InfoField>
-          <InfoField label="Time">{formatTimeRange(reservation.starts_at, reservation.ends_at)}</InfoField>
-          <InfoField label="Requested venue">{reservation.requested_venue?.name ?? '—'}</InfoField>
+          <InfoField label={t.reassign.party_size}>{reservation.party_size} {t.common.pax}</InfoField>
+          <InfoField label={t.reassign.date}>{formatDateYYYYMMDD(reservation.starts_at)}</InfoField>
+          <InfoField label={t.reassign.time}>{formatTimeRange(reservation.starts_at, reservation.ends_at)}</InfoField>
+          <InfoField label={t.reassign.requested_venue}>{reservation.requested_venue?.name ?? '—'}</InfoField>
           {reservation.overflow_reason && (
-            <InfoField label="Overflow reason">
+            <InfoField label={t.reassign.overflow_reason}>
               <span className="text-amber-400">
                 {OVERFLOW_REASON_LABELS[reservation.overflow_reason] ?? reservation.overflow_reason}
               </span>
@@ -550,7 +554,7 @@ function ReassignForm({ reservation, onClose }: { reservation: Reservation; onCl
           {reservation.special_requests && (
             <div className="col-span-2 sm:col-span-3 flex flex-col gap-0.5">
               <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                Special requests
+                {t.reassign.special_requests}
               </span>
               <span className="text-sm text-foreground whitespace-pre-wrap">
                 {reservation.special_requests}
@@ -563,18 +567,18 @@ function ReassignForm({ reservation, onClose }: { reservation: Reservation; onCl
       {/* Mode tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'suggested' | 'manual')}>
         <TabsList className="w-full">
-          <TabsTrigger value="suggested" className="flex-1 text-xs">Suggested options</TabsTrigger>
-          <TabsTrigger value="manual" className="flex-1 text-xs">Manual pick</TabsTrigger>
+          <TabsTrigger value="suggested" className="flex-1 text-xs">{t.reassign.suggested_tab}</TabsTrigger>
+          <TabsTrigger value="manual" className="flex-1 text-xs">{t.reassign.manual_tab}</TabsTrigger>
         </TabsList>
 
         {/* Suggested options */}
         <TabsContent value="suggested" className="mt-4">
           {isLoading && (
-            <div className="py-8 text-center text-sm text-muted-foreground">Loading options…</div>
+            <div className="py-8 text-center text-sm text-muted-foreground">{t.common.loading}</div>
           )}
           {!isLoading && options.length === 0 && (
             <div className="py-8 text-center text-sm text-muted-foreground">
-              No reallocation options available.
+              {t.reassign.no_options}
             </div>
           )}
           {!isLoading && options.length > 0 && (
@@ -587,7 +591,7 @@ function ReassignForm({ reservation, onClose }: { reservation: Reservation; onCl
             >
               <TabsList className="w-full">
                 <TabsTrigger value="change_venue" className="flex-1 text-xs">
-                  Change venue
+                  {t.reassign.change_venue_tab}
                   {changeVenueOptions.length > 0 && (
                     <Badge variant="secondary" className="ml-1.5 text-[10px] px-1.5 py-0">
                       {changeVenueOptions.length}
@@ -595,7 +599,7 @@ function ReassignForm({ reservation, onClose }: { reservation: Reservation; onCl
                   )}
                 </TabsTrigger>
                 <TabsTrigger value="change_time" className="flex-1 text-xs">
-                  Change time
+                  {t.reassign.change_time_tab}
                   {changeTimeOptions.length > 0 && (
                     <Badge variant="secondary" className="ml-1.5 text-[10px] px-1.5 py-0">
                       {changeTimeOptions.length}
@@ -607,7 +611,7 @@ function ReassignForm({ reservation, onClose }: { reservation: Reservation; onCl
               <TabsContent value="change_venue" className="mt-3">
                 {changeVenueOptions.length === 0 ? (
                   <p className="py-6 text-center text-sm text-muted-foreground">
-                    No alternative venues available.
+                    {t.reassign.no_alternative_venues}
                   </p>
                 ) : (
                   <div className="flex flex-col gap-4 max-h-72 overflow-y-auto pr-1">
@@ -653,7 +657,7 @@ function ReassignForm({ reservation, onClose }: { reservation: Reservation; onCl
           <div className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5">
               <Label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                Venue
+                {t.reassign.venue}
               </Label>
               <select
                 value={manualVenueId}
@@ -668,15 +672,15 @@ function ReassignForm({ reservation, onClose }: { reservation: Reservation; onCl
 
             <div className="grid grid-cols-3 gap-3">
               <div className="flex flex-col gap-1.5">
-                <Label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Date</Label>
+                <Label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{t.reassign.date}</Label>
                 <Input type="date" value={manualDate} onChange={(e) => { setManualDate(e.target.value); setManualTableIds([]) }} className="text-sm h-9" />
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">From</Label>
+                <Label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{t.reassign.from}</Label>
                 <Input type="time" value={manualStartTime} onChange={(e) => { setManualStartTime(e.target.value); setManualTableIds([]) }} className="text-sm h-9" />
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Until</Label>
+                <Label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{t.reassign.until}</Label>
                 <Input type="time" value={manualEndTime} onChange={(e) => { setManualEndTime(e.target.value); setManualTableIds([]) }} className="text-sm h-9" />
               </div>
             </div>
@@ -684,7 +688,7 @@ function ReassignForm({ reservation, onClose }: { reservation: Reservation; onCl
             {manualTimes && (
               <div className="flex flex-col gap-2">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                  Select tables
+                  {t.reassign.select_tables}
                 </p>
                 <TablePicker
                   venueId={manualVenueId}
@@ -706,20 +710,20 @@ function ReassignForm({ reservation, onClose }: { reservation: Reservation; onCl
           <Separator />
           <div className="flex flex-col gap-2">
             <Label className="text-xs font-medium">
-              Customer service note <span className="text-muted-foreground font-normal">(optional)</span>
+              {t.reassign.note_label} <span className="text-muted-foreground font-normal">({t.common.optional})</span>
             </Label>
             <Textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
               rows={2}
-              placeholder="Explain the change to the guest…"
+              placeholder={t.reassign.note_placeholder}
               className="text-sm resize-none"
             />
           </div>
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-sm font-medium">Send confirmation email</p>
-              <p className="text-xs text-muted-foreground">Sends immediately. Cannot be undone.</p>
+              <p className="text-sm font-medium">{t.reassign.send_email}</p>
+              <p className="text-xs text-muted-foreground">{t.reassign.send_email_desc}</p>
             </div>
             <Switch checked={sendEmail} onCheckedChange={setSendEmail} className="shrink-0 mt-0.5" />
           </div>
@@ -727,9 +731,9 @@ function ReassignForm({ reservation, onClose }: { reservation: Reservation; onCl
       )}
 
       <DialogFooter>
-        <Button variant="ghost" onClick={onClose}>Cancel</Button>
+        <Button variant="ghost" onClick={onClose}>{t.common.cancel}</Button>
         <Button disabled={!canProceed} onClick={() => setConfirming(true)}>
-          Review & confirm
+          {t.reassign.review_button}
         </Button>
       </DialogFooter>
     </div>
@@ -745,11 +749,12 @@ export function ReassignmentDialog({
   reservation: Reservation | null
   onClose: () => void
 }) {
+  const t = useT()
   return (
     <Dialog open={!!reservation} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-2xl max-h-[92vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Reassign reservation</DialogTitle>
+          <DialogTitle>{t.reassign.title}</DialogTitle>
         </DialogHeader>
         {reservation && <ReassignForm reservation={reservation} onClose={onClose} />}
       </DialogContent>

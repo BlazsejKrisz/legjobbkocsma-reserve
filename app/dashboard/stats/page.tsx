@@ -6,12 +6,15 @@ import { listVenues } from '@/lib/data/venues'
 import { StatsCharts } from '@/components/dashboard/StatsCharts'
 import { StatsFilters } from '@/components/dashboard/StatsFilters'
 import { subDays, format, parseISO, differenceInDays } from 'date-fns'
+import { getServerT } from '@/lib/i18n/serverT'
 
-// Resolve date range from URL search params
+type RangeT = { stats: { range_7d: string; range_30d: string; range_90d: string } }
+
 function resolveRange(
   range: string | null,
   from: string | null,
   to: string | null,
+  t: RangeT,
 ): { fromStr: string; toStr: string; days: number; label: string } {
   const today = new Date()
   const fmt = (d: Date) => format(d, 'yyyy-MM-dd')
@@ -25,7 +28,7 @@ function resolveRange(
       fromStr: fmt(subDays(today, 89)),
       toStr: fmt(today),
       days: 90,
-      label: 'Last 90 days',
+      label: t.stats.range_90d,
     }
   }
   if (range === '7d') {
@@ -33,15 +36,14 @@ function resolveRange(
       fromStr: fmt(subDays(today, 6)),
       toStr: fmt(today),
       days: 7,
-      label: 'Last 7 days',
+      label: t.stats.range_7d,
     }
   }
-  // default: 30d
   return {
     fromStr: fmt(subDays(today, 29)),
     toStr: fmt(today),
     days: 30,
-    label: 'Last 30 days',
+    label: t.stats.range_30d,
   }
 }
 
@@ -62,11 +64,12 @@ export default async function StatsPage({ searchParams }: { searchParams: Search
   if (!session) redirect('/auth/login')
   if (!session.isSuperAdmin && !session.isSupport) redirect('/dashboard')
 
-  const sp = await searchParams
+  const [sp, t] = await Promise.all([searchParams, getServerT()])
   const { fromStr, toStr, days, label } = resolveRange(
     sp.range ?? null,
     sp.from ?? null,
     sp.to ?? null,
+    t,
   )
   const venueId = sp.venue_id ? Number(sp.venue_id) : null
 
@@ -87,7 +90,6 @@ export default async function StatsPage({ searchParams }: { searchParams: Search
     listVenues(session),
   ])
 
-  // Build full day series (fill in missing days with zeros)
   const rangeStart = parseISO(fromStr)
   const dailyMap = new Map<string, DailyStatRow>(
     ((dailyResult.data ?? []) as DailyStatRow[]).map((r) => [r.day, r]),
@@ -117,54 +119,33 @@ export default async function StatsPage({ searchParams }: { searchParams: Search
     ? Math.round((completed / Math.max(1, total - overflow)) * 100)
     : 0
 
+  const summaryCards = [
+    { label: t.stats.total_reservations, value: total, hint: t.stats.total_reservations_hint },
+    { label: t.stats.total_guests, value: totalGuests, hint: t.stats.total_guests_hint },
+    { label: t.stats.completed, value: completed, hint: t.stats.completed_hint },
+    { label: t.stats.cancelled, value: cancelled, hint: t.stats.cancelled_hint },
+  ]
+
   return (
     <div className="flex flex-col gap-6">
-      {/* Header */}
       <div>
-        <h1 className="text-lg font-semibold">Statistics</h1>
-        <p className="text-sm text-muted-foreground">
-          Reservation trends, source breakdown, and venue performance.
-          Use the filters below to adjust the time range or focus on a single venue.
-        </p>
+        <h1 className="text-lg font-semibold">{t.stats.title}</h1>
+        <p className="text-sm text-muted-foreground">{t.stats.subtitle}</p>
       </div>
 
-      {/* Filter bar — client component, updates URL params */}
       <Suspense>
         <StatsFilters venues={venues.map((v) => ({ id: v.id, name: v.name }))} />
       </Suspense>
 
-      {/* Active range label */}
       <p className="text-xs text-muted-foreground -mt-3">
-        Showing: <span className="font-medium text-foreground">{label}</span>
+        {t.common.showing} <span className="font-medium text-foreground">{label}</span>
         {venueId && venues.find((v) => v.id === String(venueId)) && (
           <> · {venues.find((v) => v.id === String(venueId))?.name}</>
         )}
       </p>
 
-      {/* Summary cards */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {[
-          {
-            label: 'Total reservations',
-            value: total,
-            hint: 'All reservations in the selected period, regardless of status.',
-          },
-          {
-            label: 'Total guests',
-            value: totalGuests,
-            hint: 'Sum of party sizes across all reservations.',
-          },
-          {
-            label: 'Completed',
-            value: completed,
-            hint: 'Reservations marked as completed (guests arrived and seated).',
-          },
-          {
-            label: 'Cancelled',
-            value: cancelled,
-            hint: 'Reservations cancelled by guest or staff.',
-          },
-        ].map(({ label, value, hint }) => (
+        {summaryCards.map(({ label, value, hint }) => (
           <div
             key={label}
             className="rounded-lg border border-border bg-card px-4 py-3"
@@ -179,7 +160,6 @@ export default async function StatsPage({ searchParams }: { searchParams: Search
         ))}
       </div>
 
-      {/* Charts */}
       <StatsCharts
         daily={daily}
         sources={sourceResult.data ?? []}

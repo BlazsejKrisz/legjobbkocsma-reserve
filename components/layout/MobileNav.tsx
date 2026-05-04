@@ -9,9 +9,11 @@ import type { AppRole } from '@/lib/types/user'
 type MobileNavProps = {
   role: AppRole
   initialOverflowCount?: number
+  canSeeOverflow?: boolean
+  staffVenueId?: string
 }
 
-export function MobileNav({ role, initialOverflowCount }: MobileNavProps) {
+export function MobileNav({ role, initialOverflowCount, canSeeOverflow, staffVenueId }: MobileNavProps) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -29,6 +31,8 @@ export function MobileNav({ role, initialOverflowCount }: MobileNavProps) {
           <SidebarContent
             role={role}
             initialOverflowCount={initialOverflowCount}
+            canSeeOverflow={canSeeOverflow}
+            staffVenueId={staffVenueId}
             onClose={() => setOpen(false)}
           />
         </SheetContent>

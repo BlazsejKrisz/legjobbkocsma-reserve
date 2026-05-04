@@ -5,6 +5,7 @@ import { getSession, canAccessVenue } from '@/lib/auth/getSession'
 import { getVenue } from '@/lib/data/venues'
 import { Button } from '@/components/ui/button'
 import { TablesList } from '@/components/tables/TablesList'
+import { getServerT } from '@/lib/i18n/serverT'
 
 type Params = { params: Promise<{ venueId: string }> }
 
@@ -14,7 +15,7 @@ export default async function TablesPage({ params }: Params) {
   if (!session) redirect('/auth/login')
   if (!canAccessVenue(session, venueId)) redirect('/dashboard')
 
-  const venue = await getVenue(venueId)
+  const [venue, t] = await Promise.all([getVenue(venueId), getServerT()])
   if (!venue) notFound()
 
   return (
@@ -30,13 +31,13 @@ export default async function TablesPage({ params }: Params) {
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-semibold">Tables</h1>
+          <h1 className="text-lg font-semibold">{t.tables.title}</h1>
           <p className="text-sm text-muted-foreground">{venue.name}</p>
         </div>
         {(session.isSuperAdmin || session.isSupport) && (
           <Button variant="outline" size="sm" asChild>
             <Link href={`/dashboard/venues/${venueId}/table-types`}>
-              Manage table types
+              {t.tables.manage_table_types}
             </Link>
           </Button>
         )}

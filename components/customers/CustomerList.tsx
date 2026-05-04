@@ -7,6 +7,7 @@ import { Search, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { useDebounce } from '@/lib/hooks/useDebounce'
+import { useT } from '@/lib/i18n/useT'
 
 type Customer = {
   id: string
@@ -22,6 +23,7 @@ type Customer = {
 const PAGE_SIZE = 50
 
 export function CustomerList() {
+  const t = useT()
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [customers, setCustomers] = useState<Customer[]>([])
@@ -61,7 +63,7 @@ export function CustomerList() {
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           className="pl-9"
-          placeholder="Search by name, email, or phone…"
+          placeholder={t.customers.search_placeholder}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -72,12 +74,12 @@ export function CustomerList() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/30">
-              <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Name</th>
-              <th className="hidden px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground sm:table-cell">Email</th>
-              <th className="hidden px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground md:table-cell">Phone</th>
-              <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">Reservations</th>
-              <th className="hidden px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide text-muted-foreground sm:table-cell">Guests</th>
-              <th className="hidden px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground lg:table-cell">Last visit</th>
+              <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{t.customers.name}</th>
+              <th className="hidden px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground sm:table-cell">{t.customers.email}</th>
+              <th className="hidden px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground md:table-cell">{t.customers.phone}</th>
+              <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{t.customers.reservations}</th>
+              <th className="hidden px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide text-muted-foreground sm:table-cell">{t.customers.guests}</th>
+              <th className="hidden px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground lg:table-cell">{t.customers.last_visit}</th>
             </tr>
           </thead>
           <tbody>
@@ -94,7 +96,7 @@ export function CustomerList() {
             ) : customers.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-4 py-10 text-center text-sm text-muted-foreground">
-                  {search ? 'No customers match your search.' : 'No customers yet.'}
+                  {search ? t.customers.no_match : t.customers.no_customers}
                 </td>
               </tr>
             ) : (

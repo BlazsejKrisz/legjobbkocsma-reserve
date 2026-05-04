@@ -15,12 +15,7 @@ import {
 import { useUsers, useAssignRole, useAssignVenue, useRemoveVenue } from '@/lib/hooks/users/useUsers'
 import { useVenues } from '@/lib/hooks/venues/useVenues'
 import type { AppRole } from '@/lib/types/user'
-
-const ROLE_LABELS: Record<AppRole, string> = {
-  super_admin: 'Super Admin',
-  support: 'Support',
-  venue_staff: 'Venue Staff',
-}
+import { useT } from '@/lib/i18n/useT'
 
 const ROLE_BADGE_CLASSES: Record<AppRole, string> = {
   super_admin: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
@@ -29,6 +24,7 @@ const ROLE_BADGE_CLASSES: Record<AppRole, string> = {
 }
 
 export function UsersList() {
+  const t = useT()
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const { data: usersData, isLoading } = useUsers()
   const { data: venuesData } = useVenues()
@@ -39,16 +35,22 @@ export function UsersList() {
   const users = usersData?.data ?? []
   const venues = venuesData?.data ?? []
 
+  const ROLE_LABELS: Record<AppRole, string> = {
+    super_admin: t.role.super_admin,
+    support: t.role.support,
+    venue_staff: t.role.venue_staff,
+  }
+
   return (
     <div className="rounded-md border border-border overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow className="h-9">
-            <TableHead className="text-xs">User</TableHead>
-            <TableHead className="text-xs">Roles</TableHead>
-            <TableHead className="text-xs">Venues</TableHead>
-            <TableHead className="text-xs">Status</TableHead>
-            <TableHead className="text-xs text-right">Actions</TableHead>
+            <TableHead className="text-xs">{t.users.user}</TableHead>
+            <TableHead className="text-xs">{t.users.roles}</TableHead>
+            <TableHead className="text-xs">{t.users.venues}</TableHead>
+            <TableHead className="text-xs">{t.users.status}</TableHead>
+            <TableHead className="text-xs text-right">{t.users.actions}</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -63,7 +65,7 @@ export function UsersList() {
           {!isLoading && users.length === 0 && (
             <TableRow>
               <TableCell colSpan={5} className="py-8 text-center text-sm text-muted-foreground">
-                No users found.
+                {t.users.no_users}
               </TableCell>
             </TableRow>
           )}
@@ -98,7 +100,7 @@ export function UsersList() {
                   </TableCell>
                   <TableCell className="text-xs">
                     {hasGlobalAccess ? (
-                      <span className="text-muted-foreground">All venues</span>
+                      <span className="text-muted-foreground">{t.users.all_venues}</span>
                     ) : user.venue_names.length === 0 ? (
                       <span className="text-muted-foreground">—</span>
                     ) : (
@@ -107,7 +109,7 @@ export function UsersList() {
                   </TableCell>
                   <TableCell>
                     <span className={`text-xs ${user.is_active ? 'text-emerald-400' : 'text-zinc-500'}`}>
-                      {user.is_active ? 'Active' : 'Inactive'}
+                      {user.is_active ? t.users.active : t.users.inactive}
                     </span>
                   </TableCell>
                   <TableCell className="text-right">
@@ -118,7 +120,7 @@ export function UsersList() {
                         className="h-7 text-xs"
                         onClick={() => setExpandedId(isExpanded ? null : user.id)}
                       >
-                        Manage
+                        {t.users.manage}
                         {isExpanded ? (
                           <ChevronUp className="ml-1 h-3 w-3" />
                         ) : (
@@ -136,7 +138,7 @@ export function UsersList() {
                         {/* Role assignment */}
                         <div className="flex flex-col gap-2">
                           <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
-                            Assign role
+                            {t.users.assign_role}
                           </p>
                           <div className="flex gap-1.5">
                             {(['super_admin', 'support', 'venue_staff'] as AppRole[]).map((role) => (
@@ -158,7 +160,7 @@ export function UsersList() {
                         {!hasGlobalAccess && (
                           <div className="flex flex-col gap-2">
                             <p className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
-                              Venue access
+                              {t.users.venue_access}
                             </p>
                             <div className="flex flex-wrap gap-1.5">
                               {venues.map((v) => {
@@ -181,7 +183,7 @@ export function UsersList() {
                                 )
                               })}
                               {venues.length === 0 && (
-                                <span className="text-xs text-muted-foreground">No venues</span>
+                                <span className="text-xs text-muted-foreground">{t.users.no_venues}</span>
                               )}
                             </div>
                           </div>

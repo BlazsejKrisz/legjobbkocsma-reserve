@@ -17,10 +17,12 @@ import {
 } from '@/lib/hooks/venues/useVenueGroups'
 import { useVenues } from '@/lib/hooks/venues/useVenues'
 import type { VenueGroup } from '@/lib/types/venueGroup'
+import { useT } from '@/lib/i18n/useT'
 
 // ─── Single group card ────────────────────────────────────────────────────────
 
 function GroupCard({ group }: { group: VenueGroup }) {
+  const t = useT()
   const [renaming, setRenaming] = useState(false)
   const [nameInput, setNameInput] = useState(group.name)
   const [addingVenue, setAddingVenue] = useState(false)
@@ -106,7 +108,7 @@ function GroupCard({ group }: { group: VenueGroup }) {
 
       {/* Members */}
       {members.length === 0 && (
-        <p className="text-xs text-muted-foreground italic">No venues yet.</p>
+        <p className="text-xs text-muted-foreground italic">{t.venue_groups.no_venues}</p>
       )}
       <div className="flex flex-col gap-1">
         {members.map((m, idx) => (
@@ -145,7 +147,7 @@ function GroupCard({ group }: { group: VenueGroup }) {
             onChange={(e) => setSelectedVenueId(e.target.value)}
             className="flex-1 rounded-md border border-input bg-background px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
           >
-            <option value="">Select a venue…</option>
+            <option value="">{t.venue_groups.select_venue_placeholder}</option>
             {availableToAdd.map((v) => (
               <option key={v.id} value={v.id}>{v.name}</option>
             ))}
@@ -161,10 +163,10 @@ function GroupCard({ group }: { group: VenueGroup }) {
               }
             }}
           >
-            Add
+            {t.common.add}
           </Button>
           <Button size="sm" variant="ghost" onClick={() => { setAddingVenue(false); setSelectedVenueId('') }}>
-            Cancel
+            {t.common.cancel}
           </Button>
         </div>
       ) : (
@@ -176,7 +178,7 @@ function GroupCard({ group }: { group: VenueGroup }) {
             onClick={() => setAddingVenue(true)}
           >
             <Plus className="h-3.5 w-3.5 mr-1" />
-            Add venue
+            {t.venue_groups.add_venue}
           </Button>
         )
       )}
@@ -187,6 +189,7 @@ function GroupCard({ group }: { group: VenueGroup }) {
 // ─── Manager ──────────────────────────────────────────────────────────────────
 
 export function VenueGroupsManager() {
+  const t = useT()
   const { data, isLoading } = useVenueGroups()
   const create = useCreateVenueGroup()
   const [newName, setNewName] = useState('')
@@ -205,11 +208,11 @@ export function VenueGroupsManager() {
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          Groups define which venues can receive each other&apos;s overflow. Drag to set priority order.
+          {t.venue_groups.desc}
         </p>
         <Button size="sm" onClick={() => setCreating(true)}>
           <Plus className="h-3.5 w-3.5 mr-1.5" />
-          New group
+          {t.venue_groups.new_group}
         </Button>
       </div>
 
@@ -219,23 +222,23 @@ export function VenueGroupsManager() {
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') handleCreate(); if (e.key === 'Escape') { setCreating(false); setNewName('') } }}
-            placeholder="Group name…"
+            placeholder={t.venue_groups.group_name_placeholder}
             autoFocus
             className="h-8 text-sm flex-1"
           />
           <Button size="sm" onClick={handleCreate} disabled={!newName.trim() || create.isPending}>
-            Create
+            {t.common.create}
           </Button>
           <Button size="sm" variant="ghost" onClick={() => { setCreating(false); setNewName('') }}>
-            Cancel
+            {t.common.cancel}
           </Button>
         </div>
       )}
 
-      {isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
+      {isLoading && <p className="text-sm text-muted-foreground">{t.venue_groups.loading}</p>}
       {!isLoading && groups.length === 0 && !creating && (
         <p className="text-sm text-muted-foreground italic py-4 text-center">
-          No venue groups yet. Create one to enable group-based overflow routing.
+          {t.venue_groups.no_groups}
         </p>
       )}
 

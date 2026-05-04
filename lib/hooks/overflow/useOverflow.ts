@@ -18,13 +18,14 @@ export function useOverflowQueue(venueId?: string) {
 }
 
 /** Lightweight count used by the sidebar badge. Shares cache with useOverflowQueue. */
-export function useOverflowCount(initialCount?: number) {
+export function useOverflowCount(initialCount?: number, enabled = true) {
   const { data, ...rest } = useQuery({
     queryKey: qk.overflow.list(undefined),
     queryFn: () => apiFetch<{ data: Reservation[] }>('/api/overflow'),
     select: (d) => d.data.length,
     staleTime: 30_000,
     refetchInterval: 60_000,
+    enabled,
   })
 
   return { ...rest, data: data ?? initialCount }

@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { CalendarDays, AlertTriangle, CheckCircle, TrendingUp } from 'lucide-react'
 import { subDays, format } from 'date-fns'
+import { getServerT } from '@/lib/i18n/serverT'
 import type { UserSession } from '@/lib/auth/getSession'
 
 type StatCardProps = {
@@ -58,7 +59,7 @@ function StatCard({ title, value, sub, icon: Icon, variant = 'default' }: StatCa
 
 export async function OverviewStats(props: { session: UserSession }) {
   void props
-  const supabase = await createClient()
+  const [supabase, t] = await Promise.all([createClient(), getServerT()])
 
   const today = new Date()
   const todayStart = new Date()
@@ -102,30 +103,30 @@ export async function OverviewStats(props: { session: UserSession }) {
   return (
     <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
       <StatCard
-        title="Today's reservations"
+        title={t.overview.todays_reservations}
         value={todayCount}
-        sub="Scheduled for today"
+        sub={t.overview.todays_reservations_sub}
         icon={CalendarDays}
         variant="brand"
       />
       <StatCard
-        title="Confirmed today"
+        title={t.overview.confirmed_today}
         value={confirmedToday}
-        sub="Ready to go"
+        sub={t.overview.confirmed_today_sub}
         icon={CheckCircle}
         variant="success"
       />
       <StatCard
-        title="Manual review queue"
+        title={t.overview.manual_review}
         value={overflowCount}
-        sub={overflowCount > 0 ? 'Needs attention' : 'Queue clear'}
+        sub={overflowCount > 0 ? t.overview.needs_attention : t.overview.queue_clear}
         icon={AlertTriangle}
         variant={overflowCount > 0 ? 'warning' : 'default'}
       />
       <StatCard
-        title="Completion rate"
+        title={t.overview.completion_rate}
         value={completionRate7 != null ? `${completionRate7}%` : '—'}
-        sub="Last 7 days"
+        sub={t.overview.completion_rate_sub}
         icon={TrendingUp}
         variant={completionRate7 != null && completionRate7 >= 70 ? 'success' : 'default'}
       />

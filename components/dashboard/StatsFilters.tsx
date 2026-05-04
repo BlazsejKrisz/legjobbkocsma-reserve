@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { CalendarDays, X } from 'lucide-react'
+import { useT } from '@/lib/i18n/useT'
 
 type Venue = { id: string; name: string }
 
@@ -22,25 +23,8 @@ type Props = {
 
 const TODAY = format(new Date(), 'yyyy-MM-dd')
 
-const PRESETS = [
-  {
-    id: '7d',
-    label: 'Last 7 days',
-    get: () => ({ from: format(subDays(new Date(), 6), 'yyyy-MM-dd'), to: TODAY }),
-  },
-  {
-    id: '30d',
-    label: 'Last 30 days',
-    get: () => ({ from: format(subDays(new Date(), 29), 'yyyy-MM-dd'), to: TODAY }),
-  },
-  {
-    id: '90d',
-    label: 'Last 90 days',
-    get: () => ({ from: format(subDays(new Date(), 89), 'yyyy-MM-dd'), to: TODAY }),
-  },
-] as const
-
 export function StatsFilters({ venues }: Props) {
+  const t = useT()
   const router = useRouter()
   const pathname = usePathname()
   const params = useSearchParams()
@@ -51,6 +35,24 @@ export function StatsFilters({ venues }: Props) {
   const currentVenue = params.get('venue_id') ?? ''
   const customFrom = params.get('from') ?? ''
   const customTo = params.get('to') ?? ''
+
+  const PRESETS = [
+    {
+      id: '7d',
+      label: t.stats_filters.last_7_days,
+      get: () => ({ from: format(subDays(new Date(), 6), 'yyyy-MM-dd'), to: TODAY }),
+    },
+    {
+      id: '30d',
+      label: t.stats_filters.last_30_days,
+      get: () => ({ from: format(subDays(new Date(), 29), 'yyyy-MM-dd'), to: TODAY }),
+    },
+    {
+      id: '90d',
+      label: t.stats_filters.last_90_days,
+      get: () => ({ from: format(subDays(new Date(), 89), 'yyyy-MM-dd'), to: TODAY }),
+    },
+  ] as const
 
   function push(patch: Record<string, string>) {
     const next = new URLSearchParams(params.toString())
@@ -74,11 +76,10 @@ export function StatsFilters({ venues }: Props) {
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Presets + venue */}
       <div className="flex flex-wrap items-center gap-2">
         <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
           <CalendarDays className="h-3 w-3" />
-          Range:
+          {t.stats_filters.range}
         </span>
 
         {PRESETS.map((p) => (
@@ -99,7 +100,7 @@ export function StatsFilters({ venues }: Props) {
           className="h-7 text-[11px] px-3"
           onClick={() => setCustomOpen((o) => !o)}
         >
-          Custom
+          {t.stats_filters.custom}
         </Button>
 
         {venues.length > 1 && (
@@ -108,10 +109,10 @@ export function StatsFilters({ venues }: Props) {
             onValueChange={(v) => push({ venue_id: v === '__all' ? '' : v })}
           >
             <SelectTrigger className="h-7 w-40 text-[11px]">
-              <SelectValue placeholder="All venues" />
+              <SelectValue placeholder={t.stats_filters.all_venues} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__all">All venues</SelectItem>
+              <SelectItem value="__all">{t.stats_filters.all_venues}</SelectItem>
               {venues.map((v) => (
                 <SelectItem key={v.id} value={v.id}>
                   {v.name}
@@ -122,11 +123,10 @@ export function StatsFilters({ venues }: Props) {
         )}
       </div>
 
-      {/* Custom date pickers */}
       {(customOpen || isCustomActive) && (
         <div className="flex flex-wrap items-center gap-2 pl-1">
           <div className="flex items-center gap-1.5">
-            <label className="text-[11px] text-muted-foreground">From</label>
+            <label className="text-[11px] text-muted-foreground">{t.stats_filters.from}</label>
             <Input
               type="date"
               defaultValue={customFrom}
@@ -136,7 +136,7 @@ export function StatsFilters({ venues }: Props) {
             />
           </div>
           <div className="flex items-center gap-1.5">
-            <label className="text-[11px] text-muted-foreground">To</label>
+            <label className="text-[11px] text-muted-foreground">{t.stats_filters.to}</label>
             <Input
               type="date"
               defaultValue={customTo}
@@ -154,7 +154,7 @@ export function StatsFilters({ venues }: Props) {
               onClick={() => { push({ range: '30d', from: '', to: '' }); setCustomOpen(false) }}
             >
               <X className="h-3 w-3 mr-1" />
-              Clear
+              {t.stats_filters.clear}
             </Button>
           )}
         </div>

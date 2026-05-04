@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/collapsible'
 import { useOutboxSummary, useFailedOutboxEvents, useRetryOutboxEvent } from '@/lib/hooks/venues/useVenues'
 import type { OutboxProviderSummary, OutboxEvent } from '@/lib/types/outbox'
+import { useT } from '@/lib/i18n/useT'
 
 type Props = {
   venueId: string
@@ -46,6 +47,7 @@ function FailedEventRow({
   event: OutboxEvent
   venueId: string
 }) {
+  const t = useT()
   const [showPayload, setShowPayload] = useState(false)
   const retry = useRetryOutboxEvent(venueId)
 
@@ -62,7 +64,7 @@ function FailedEventRow({
               {new Date(event.created_at).toLocaleString()}
             </span>
             <Badge className="bg-red-500/10 text-red-400 border-red-500/25 text-[10px]">
-              {event.attempts}/{event.max_attempts} attempts
+              {event.attempts}/{event.max_attempts} {t.outbox.attempts}
             </Badge>
           </div>
 
@@ -72,7 +74,7 @@ function FailedEventRow({
 
           {event.next_retry_at && (
             <p className="text-[10px] text-muted-foreground">
-              Next retry: {new Date(event.next_retry_at).toLocaleString()}
+              {t.outbox.next_retry} {new Date(event.next_retry_at).toLocaleString()}
             </p>
           )}
         </div>
@@ -84,7 +86,7 @@ function FailedEventRow({
             className="h-6 text-[10px] px-2"
             onClick={() => setShowPayload((v) => !v)}
           >
-            {showPayload ? 'Hide' : 'Payload'}
+            {showPayload ? t.outbox.hide : t.outbox.payload}
           </Button>
 
           <Button
@@ -95,7 +97,7 @@ function FailedEventRow({
             onClick={() => retry.mutate(event.id)}
           >
             <RefreshCw className="h-3 w-3 mr-1" />
-            Retry
+            {t.outbox.retry}
           </Button>
         </div>
       </div>
@@ -117,17 +119,18 @@ function ProviderFailedEvents({
   venueId: string
   provider: string
 }) {
+  const t = useT()
   const { data, isLoading, refetch } = useFailedOutboxEvents(venueId, provider)
   const events: OutboxEvent[] = data?.data ?? []
 
   if (isLoading) {
-    return <p className="text-xs text-muted-foreground py-2">Loading failed events…</p>
+    return <p className="text-xs text-muted-foreground py-2">{t.outbox.loading_failed}</p>
   }
 
   if (events.length === 0) {
     return (
       <p className="text-xs text-muted-foreground italic py-2">
-        No failed events — all clear.
+        {t.outbox.no_failed}
       </p>
     )
   }
@@ -136,7 +139,7 @@ function ProviderFailedEvents({
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
         <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-medium">
-          Failed events ({events.length})
+          {t.outbox.failed_events} ({events.length})
         </span>
         <Button
           variant="ghost"
@@ -144,13 +147,22 @@ function ProviderFailedEvents({
           className="h-5 text-[10px] px-2"
           onClick={() => refetch()}
         >
-          Refresh
+          {t.common.refresh}
         </Button>
       </div>
       {events.map((ev) => (
         <FailedEventRow key={ev.id} event={ev} venueId={venueId} />
       ))}
     </div>
+  )
+}
+
+function ProviderNoFailed() {
+  const t = useT()
+  return (
+    <p className="text-xs text-muted-foreground italic pt-3">
+      {t.outbox.no_failed_provider}
+    </p>
   )
 }
 
@@ -199,9 +211,7 @@ function ProviderCard({
                 <ProviderFailedEvents venueId={venueId} provider={summary.provider} />
               </div>
             ) : (
-              <p className="text-xs text-muted-foreground italic pt-3">
-                No failed events for this provider.
-              </p>
+              <ProviderNoFailed />
             )}
           </div>
         </CollapsibleContent>
@@ -213,6 +223,7 @@ function ProviderCard({
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export function OutboxDashboard({ venueId }: Props) {
+  const t = useT()
   const { data, isLoading, refetch, dataUpdatedAt } = useOutboxSummary(venueId)
   const summaries: OutboxProviderSummary[] = data?.data ?? []
 
@@ -223,19 +234,18 @@ export function OutboxDashboard({ venueId }: Props) {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Header */}
       <div className="flex items-center gap-2">
         <div className="flex-1">
-          <h2 className="text-sm font-medium">Outbox delivery status</h2>
+          <h2 className="text-sm font-medium">{t.outbox.title}</h2>
           {lastUpdated && (
-            <p className="text-[10px] text-muted-foreground">Updated {lastUpdated}</p>
+            <p className="text-[10px] text-muted-foreground">{t.outbox.updated} {lastUpdated}</p>
           )}
         </div>
 
         {totalFailed > 0 && (
           <div className="flex items-center gap-1.5 text-red-400">
             <AlertCircle className="h-4 w-4" />
-            <span className="text-xs font-medium">{totalFailed} failed</span>
+            <span className="text-xs font-medium">{totalFailed} {t.outbox.failed_count}</span>
           </div>
         )}
 
@@ -247,11 +257,10 @@ export function OutboxDashboard({ venueId }: Props) {
           onClick={() => refetch()}
         >
           <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${isLoading ? 'animate-spin' : ''}`} />
-          Refresh
+          {t.common.refresh}
         </Button>
       </div>
 
-      {/* Loading */}
       {isLoading && (
         <div className="space-y-2">
           {Array.from({ length: 2 }).map((_, i) => (
@@ -260,7 +269,6 @@ export function OutboxDashboard({ venueId }: Props) {
         </div>
       )}
 
-      {/* Provider cards */}
       {!isLoading && summaries.length > 0 && (
         <div className="flex flex-col gap-2">
           {summaries.map((s) => (
@@ -269,11 +277,9 @@ export function OutboxDashboard({ venueId }: Props) {
         </div>
       )}
 
-      {/* Empty state */}
       {!isLoading && summaries.length === 0 && (
         <p className="text-xs text-muted-foreground italic">
-          No outbox activity yet. Events will appear here once integrations are configured and
-          reservations are created.
+          {t.outbox.no_activity}
         </p>
       )}
     </div>

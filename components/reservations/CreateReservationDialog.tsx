@@ -19,12 +19,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useCreateReservation } from '@/lib/hooks/reservations/useCreateReservation'
 import type { CreateReservationPayload } from '@/lib/validators/reservations'
 import { fromLocalDateAndTimes, todayYYYYMMDD } from '@/lib/datetime'
 import type { Venue } from '@/lib/types/venue'
 import type { TableType } from '@/lib/types/table'
+import { useT } from '@/lib/i18n/useT'
 
 type Props = {
   open: boolean
@@ -53,6 +54,16 @@ type FormValues = {
   requested_table_type_id: string
 }
 
+function addMinutes(time: string, minutes: number): string {
+  const [h, m] = time.split(':').map(Number)
+  const total = h * 60 + m + minutes
+  const newH = Math.floor(total / 60) % 24
+  const newM = total % 60
+  return `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`
+}
+
+const DEFAULT_OFFSET_MIN = 120
+
 export function CreateReservationDialog({
   open,
   onClose,
@@ -61,20 +72,21 @@ export function CreateReservationDialog({
   defaultVenueId,
   prefill,
 }: Props) {
+  const t = useT()
   const create = useCreateReservation()
 
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    watch,
-    reset,
-  } = useForm<FormValues>({
+  // custom until is on when the timeline provided an explicit end time
+  const [customUntil, setCustomUntil] = useState(() => !!prefill?.until_time)
+
+  const defaultFrom = prefill?.from_time ?? '19:00'
+  const defaultUntil = prefill?.until_time ?? addMinutes(defaultFrom, DEFAULT_OFFSET_MIN)
+
+  const { register, handleSubmit, setValue, watch, reset } = useForm<FormValues>({
     defaultValues: {
       venue_id: defaultVenueId ?? venues[0]?.id ?? '',
       date: prefill?.date ?? todayYYYYMMDD(),
-      from_time: prefill?.from_time ?? '19:00',
-      until_time: prefill?.until_time ?? '21:00',
+      from_time: defaultFrom,
+      until_time: defaultUntil,
       party_size: 2,
       source: 'admin',
       special_requests: '',
@@ -85,14 +97,17 @@ export function CreateReservationDialog({
     },
   })
 
-  // Re-initialise defaults whenever the dialog opens with new prefill values
+  // Re-initialise whenever the dialog opens with new prefill values
   useEffect(() => {
     if (open) {
+      const from = prefill?.from_time ?? '19:00'
+      const hasExplicitUntil = !!prefill?.until_time
+      setCustomUntil(hasExplicitUntil)
       reset({
         venue_id: defaultVenueId ?? venues[0]?.id ?? '',
         date: prefill?.date ?? todayYYYYMMDD(),
-        from_time: prefill?.from_time ?? '19:00',
-        until_time: prefill?.until_time ?? '21:00',
+        from_time: from,
+        until_time: prefill?.until_time ?? addMinutes(from, DEFAULT_OFFSET_MIN),
         party_size: 2,
         source: 'admin',
         special_requests: '',
@@ -104,6 +119,14 @@ export function CreateReservationDialog({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
+
+  // Auto-update until_time when from_time changes (while custom is off)
+  const fromTime = watch('from_time')
+  useEffect(() => {
+    if (!customUntil) {
+      setValue('until_time', addMinutes(fromTime, DEFAULT_OFFSET_MIN))
+    }
+  }, [fromTime, customUntil, setValue])
 
   const onSubmit = (values: FormValues) => {
     const { starts_at, ends_at } = fromLocalDateAndTimes(
@@ -140,13 +163,13 @@ export function CreateReservationDialog({
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>New reservation</DialogTitle>
+          <DialogTitle>{t.create.title}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-2">
           {venues.length > 1 && (
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs">Venue</Label>
+              <Label className="text-xs">{t.create.venue}</Label>
               <Select
                 value={watch('venue_id')}
                 onValueChange={(v: string) => setValue('venue_id', v)}
@@ -163,24 +186,46 @@ export function CreateReservationDialog({
             </div>
           )}
 
-          <div className="grid grid-cols-3 gap-2">
-            <div className="col-span-1 flex flex-col gap-1.5">
-              <Label className="text-xs">Date</Label>
-              <Input type="date" {...register('date')} className="h-9 text-sm" />
-            </div>
+          {/* Date — full row */}
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-xs">{t.create.date}</Label>
+            <Input type="date" {...register('date')} className="h-9 text-sm" />
+          </div>
+
+          {/* From + Until — same row */}
+          <div className="grid grid-cols-2 gap-2">
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs">From</Label>
+              <Label className="text-xs">{t.create.from}</Label>
               <Input type="time" {...register('from_time')} className="h-9 text-sm" />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs">Until</Label>
-              <Input type="time" {...register('until_time')} className="h-9 text-sm" />
+              <Label className="text-xs">{t.create.until}</Label>
+              <Input
+                type="time"
+                {...register('until_time')}
+                disabled={!customUntil}
+                className="h-9 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+              <label className="flex items-center gap-2 cursor-pointer w-fit">
+                <input
+                  type="checkbox"
+                  checked={customUntil}
+                  onChange={(e) => {
+                    setCustomUntil(e.target.checked)
+                    if (!e.target.checked) {
+                      setValue('until_time', addMinutes(fromTime, DEFAULT_OFFSET_MIN))
+                    }
+                  }}
+                  className="h-3.5 w-3.5 rounded border-border accent-primary"
+                />
+                <span className="text-xs text-muted-foreground">{t.create.custom_until}</span>
+              </label>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-2">
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs">Party size</Label>
+              <Label className="text-xs">{t.create.party_size}</Label>
               <Input
                 type="number"
                 min={1}
@@ -189,7 +234,7 @@ export function CreateReservationDialog({
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs">Source</Label>
+              <Label className="text-xs">{t.create.source}</Label>
               <Select
                 value={watch('source')}
                 onValueChange={(v: string) => setValue('source', v)}
@@ -198,11 +243,11 @@ export function CreateReservationDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {['web', 'phone', 'admin', 'walk_in', 'partner'].map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {s.replace('_', ' ')}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="web">{t.source.web}</SelectItem>
+                  <SelectItem value="phone">{t.source.phone}</SelectItem>
+                  <SelectItem value="admin">{t.source.admin}</SelectItem>
+                  <SelectItem value="walk_in">{t.source.walk_in}</SelectItem>
+                  <SelectItem value="partner">{t.source.partner}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -210,7 +255,7 @@ export function CreateReservationDialog({
 
           {tableTypes.length > 0 && (
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs">Table type preference (optional)</Label>
+              <Label className="text-xs">{t.create.table_type}</Label>
               <Select
                 value={watch('requested_table_type_id')}
                 onValueChange={(v: string) =>
@@ -218,10 +263,10 @@ export function CreateReservationDialog({
                 }
               >
                 <SelectTrigger className="h-9 text-sm">
-                  <SelectValue placeholder="Any type" />
+                  <SelectValue placeholder={t.create.table_type_placeholder} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__none">Any type</SelectItem>
+                  <SelectItem value="__none">{t.create.table_type_placeholder}</SelectItem>
                   {tableTypes.map((tt) => (
                     <SelectItem key={tt.id} value={tt.id}>{tt.name}</SelectItem>
                   ))}
@@ -231,39 +276,42 @@ export function CreateReservationDialog({
           )}
 
           <div className="flex flex-col gap-1.5">
-            <Label className="text-xs">Special requests (optional)</Label>
+            <Label className="text-xs">{t.create.special_requests}</Label>
             <Textarea
               {...register('special_requests')}
-              placeholder="Guest message or special requirements…"
+              placeholder={t.create.special_requests_placeholder}
               rows={2}
               className="text-sm resize-none"
             />
           </div>
 
           <div className="space-y-2 border-t border-border pt-3">
-            <p className="text-xs font-medium text-muted-foreground">Customer <span className="text-destructive">*</span> <span className="font-normal">(email or phone required)</span></p>
+            <p className="text-xs font-medium text-muted-foreground">
+              {t.create.customer} <span className="text-destructive">*</span>{' '}
+              <span className="font-normal">({t.create.customer_requirement})</span>
+            </p>
             <Input
               {...register('customer_full_name')}
-              placeholder="Full name"
+              placeholder={t.create.name_placeholder}
               className="h-9 text-sm"
             />
             <Input
               {...register('customer_email')}
               type="email"
-              placeholder="Email"
+              placeholder={t.create.email_placeholder}
               className="h-9 text-sm"
             />
             <Input
               {...register('customer_phone')}
-              placeholder="Phone"
+              placeholder={t.create.phone_placeholder}
               className="h-9 text-sm"
             />
           </div>
 
           <DialogFooter className="pt-2">
-            <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
+            <Button type="button" variant="ghost" onClick={onClose}>{t.common.cancel}</Button>
             <Button type="submit" disabled={create.isPending}>
-              {create.isPending ? 'Creating…' : 'Create reservation'}
+              {create.isPending ? t.common.creating : t.create.create_button}
             </Button>
           </DialogFooter>
         </form>

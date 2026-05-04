@@ -27,6 +27,7 @@ import { useUpdateReservation, useMarkConfirmationEmailSent, useRevertCancellati
 import { formatTimeRange, formatDateYYYYMMDD, toLocalDateTimeInputs, fromLocalDateAndTimes } from '@/lib/datetime'
 import { OVERFLOW_REASON_LABELS, SOURCE_LABELS } from '@/lib/domain/reservation'
 import type { Reservation, ReservationEvent } from '@/lib/types/reservation'
+import { useT } from '@/lib/i18n/useT'
 
 type Props = {
   reservationId: string | null
@@ -45,11 +46,12 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
 }
 
 function EventLog({ reservationId }: { reservationId: string }) {
+  const t = useT()
   const { data, isLoading } = useReservationEvents(reservationId)
   const events: ReservationEvent[] = data?.data ?? []
 
-  if (isLoading) return <p className="text-xs text-muted-foreground">Loading…</p>
-  if (events.length === 0) return <p className="text-xs text-muted-foreground italic">No events yet.</p>
+  if (isLoading) return <p className="text-xs text-muted-foreground">{t.common.loading}</p>
+  if (events.length === 0) return <p className="text-xs text-muted-foreground italic">{t.detail.no_events}</p>
 
   return (
     <ol className="space-y-2">
@@ -79,6 +81,7 @@ function EditReservationDialog({
   open: boolean
   onClose: () => void
 }) {
+  const t = useT()
   const update = useUpdateReservation()
   const c = reservation.customers
 
@@ -117,24 +120,24 @@ function EditReservationDialog({
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Edit reservation</DialogTitle>
+          <DialogTitle>{t.detail.edit_title}</DialogTitle>
         </DialogHeader>
         <div className="flex flex-col gap-4 py-1">
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2 flex flex-col gap-1">
-              <Label className="text-xs">Full name</Label>
+              <Label className="text-xs">{t.detail.full_name}</Label>
               <Input value={fullName} onChange={(e) => setFullName(e.target.value)} className="text-sm h-8" />
             </div>
             <div className="flex flex-col gap-1">
-              <Label className="text-xs">Phone</Label>
+              <Label className="text-xs">{t.detail.phone}</Label>
               <Input value={phone} onChange={(e) => setPhone(e.target.value)} className="text-sm h-8" />
             </div>
             <div className="flex flex-col gap-1">
-              <Label className="text-xs">Email</Label>
+              <Label className="text-xs">{t.detail.email}</Label>
               <Input value={email} onChange={(e) => setEmail(e.target.value)} type="email" className="text-sm h-8" />
             </div>
             <div className="flex flex-col gap-1">
-              <Label className="text-xs">Party size</Label>
+              <Label className="text-xs">{t.detail.party_size}</Label>
               <Input
                 value={partySize}
                 onChange={(e) => setPartySize(e.target.value)}
@@ -144,20 +147,20 @@ function EditReservationDialog({
               />
             </div>
             <div className="flex flex-col gap-1">
-              <Label className="text-xs">Date</Label>
+              <Label className="text-xs">{t.detail.date}</Label>
               <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="text-sm h-8" />
             </div>
             <div className="flex flex-col gap-1">
-              <Label className="text-xs">Start time</Label>
+              <Label className="text-xs">{t.detail.start_time}</Label>
               <Input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} className="text-sm h-8" />
             </div>
             <div className="flex flex-col gap-1">
-              <Label className="text-xs">End time</Label>
+              <Label className="text-xs">{t.detail.end_time}</Label>
               <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="text-sm h-8" />
             </div>
           </div>
           <div className="flex flex-col gap-1">
-            <Label className="text-xs">Special requests</Label>
+            <Label className="text-xs">{t.detail.special_requests}</Label>
             <Textarea
               value={specialRequests}
               onChange={(e) => setSpecialRequests(e.target.value)}
@@ -166,7 +169,7 @@ function EditReservationDialog({
             />
           </div>
           <div className="flex flex-col gap-1">
-            <Label className="text-xs">Internal notes</Label>
+            <Label className="text-xs">{t.detail.internal_notes}</Label>
             <Textarea
               value={internalNotes}
               onChange={(e) => setInternalNotes(e.target.value)}
@@ -176,9 +179,9 @@ function EditReservationDialog({
           </div>
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button variant="ghost" onClick={onClose}>{t.common.cancel}</Button>
           <Button onClick={handleSave} disabled={update.isPending}>
-            {update.isPending ? 'Saving…' : 'Save changes'}
+            {update.isPending ? t.common.saving : t.detail.save_changes}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -189,6 +192,7 @@ function EditReservationDialog({
 // ─── Detail content ───────────────────────────────────────────────────────────
 
 function DetailContent({ reservation }: { reservation: Reservation }) {
+  const t = useT()
   const [notes, setNotes] = useState(reservation.internal_notes ?? '')
   const [editingNotes, setEditingNotes] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
@@ -218,21 +222,21 @@ function DetailContent({ reservation }: { reservation: Reservation }) {
       <Dialog open={cancelConfirmOpen} onOpenChange={setCancelConfirmOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Cancel reservation</DialogTitle>
+            <DialogTitle>{t.detail.cancel_title}</DialogTitle>
             <DialogDescription>
-              This will mark the reservation as cancelled and release any assigned tables.
+              {t.detail.cancel_description}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setCancelConfirmOpen(false)}>
-              Back
+              {t.common.back}
             </Button>
             <Button
               variant="destructive"
               disabled={update.isPending}
               onClick={confirmCancellation}
             >
-              {update.isPending ? 'Cancelling…' : 'Confirm cancellation'}
+              {update.isPending ? t.detail.cancelling : t.detail.confirm_cancellation}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -241,7 +245,7 @@ function DetailContent({ reservation }: { reservation: Reservation }) {
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="text-base font-medium">{customer?.full_name ?? 'Walk-in'}</p>
+          <p className="text-base font-medium">{customer?.full_name ?? t.common.walk_in}</p>
           {customer?.email && <p className="text-xs text-muted-foreground">{customer.email}</p>}
           {customer?.phone && (
             <a href={`tel:${customer.phone}`} className="text-xs text-muted-foreground hover:underline">
@@ -256,22 +260,22 @@ function DetailContent({ reservation }: { reservation: Reservation }) {
 
       {/* Key fields */}
       <div className="grid grid-cols-2 gap-4">
-        <Field label="Date" value={date} />
-        <Field label="Time" value={timeRange} />
-        <Field label="Party size" value={reservation.party_size} />
-        <Field label="Source" value={SOURCE_LABELS[reservation.source] ?? reservation.source} />
-        <Field label="Requested venue" value={reservation.requested_venue?.name} />
+        <Field label={t.detail.date} value={date} />
+        <Field label={t.detail.time} value={timeRange} />
+        <Field label={t.detail.party_size} value={reservation.party_size} />
+        <Field label={t.detail.source} value={SOURCE_LABELS[reservation.source] ?? reservation.source} />
+        <Field label={t.detail.requested_venue} value={reservation.requested_venue?.name} />
         <Field
-          label="Assigned venue"
+          label={t.detail.assigned_venue}
           value={
             reservation.assigned_venue
               ? reservation.assigned_venue.name
-              : <span className="text-amber-400">Not assigned</span>
+              : <span className="text-amber-400">{t.detail.not_assigned}</span>
           }
         />
         {reservation.overflow_reason && (
           <Field
-            label="Overflow reason"
+            label={t.detail.overflow_reason}
             value={
               <span className="text-amber-400 text-xs">
                 {OVERFLOW_REASON_LABELS[reservation.overflow_reason] ?? reservation.overflow_reason}
@@ -280,19 +284,19 @@ function DetailContent({ reservation }: { reservation: Reservation }) {
           />
         )}
         <Field
-          label="Auto confirmation"
+          label={t.detail.auto_confirmation}
           value={
             reservation.auto_confirmation_email_sent_at
               ? new Date(reservation.auto_confirmation_email_sent_at).toLocaleString()
-              : 'Not sent'
+              : t.detail.not_sent
           }
         />
         <Field
-          label="Manual confirmation"
+          label={t.detail.manual_confirmation}
           value={
             reservation.manual_confirmation_email_sent_at
               ? new Date(reservation.manual_confirmation_email_sent_at).toLocaleString()
-              : 'Not sent'
+              : t.detail.not_sent
           }
         />
       </div>
@@ -303,7 +307,7 @@ function DetailContent({ reservation }: { reservation: Reservation }) {
           <Separator />
           <div className="flex flex-col gap-2">
             <span className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
-              Assigned tables
+              {t.detail.assigned_tables}
             </span>
             <div className="flex flex-wrap gap-1.5">
               {assignedTables.map((rt) => (
@@ -325,7 +329,7 @@ function DetailContent({ reservation }: { reservation: Reservation }) {
           <Separator />
           <div className="flex flex-col gap-1.5">
             <span className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
-              Special requests
+              {t.detail.special_requests}
             </span>
             <p className="text-sm text-foreground whitespace-pre-wrap">
               {reservation.special_requests}
@@ -339,7 +343,7 @@ function DetailContent({ reservation }: { reservation: Reservation }) {
       {/* Internal notes */}
       <div className="flex flex-col gap-2">
         <span className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
-          Internal notes
+          {t.detail.internal_notes}
         </span>
         {editingNotes ? (
           <div className="flex flex-col gap-2">
@@ -360,7 +364,7 @@ function DetailContent({ reservation }: { reservation: Reservation }) {
                   )
                 }
               >
-                Save
+                {t.common.save}
               </Button>
               <Button
                 size="sm"
@@ -370,7 +374,7 @@ function DetailContent({ reservation }: { reservation: Reservation }) {
                   setEditingNotes(false)
                 }}
               >
-                Cancel
+                {t.common.cancel}
               </Button>
             </div>
           </div>
@@ -379,7 +383,7 @@ function DetailContent({ reservation }: { reservation: Reservation }) {
             className="cursor-pointer rounded-md border border-transparent px-1 py-0.5 text-sm text-muted-foreground hover:border-border hover:text-foreground"
             onClick={() => setEditingNotes(true)}
           >
-            {notes || <span className="italic">Click to add notes…</span>}
+            {notes || <span className="italic">{t.detail.click_to_add_notes}</span>}
           </div>
         )}
       </div>
@@ -390,7 +394,7 @@ function DetailContent({ reservation }: { reservation: Reservation }) {
       <div className="flex flex-wrap gap-2">
         {reservation.status !== 'cancelled' && (
           <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>
-            Edit
+            {t.common.edit}
           </Button>
         )}
         {reservation.status === 'confirmed' && !reservation.manual_confirmation_email_sent_at && (
@@ -400,7 +404,7 @@ function DetailContent({ reservation }: { reservation: Reservation }) {
             disabled={markEmailSent.isPending}
             onClick={() => markEmailSent.mutate(reservation.id)}
           >
-            Mark email sent
+            {t.detail.mark_email_sent}
           </Button>
         )}
         {(reservation.status === 'confirmed' || reservation.status === 'pending_manual_review') && (
@@ -411,7 +415,7 @@ function DetailContent({ reservation }: { reservation: Reservation }) {
               disabled={update.isPending}
               onClick={() => update.mutate({ id: reservation.id, status: 'completed' })}
             >
-              Mark completed
+              {t.detail.mark_completed}
             </Button>
             <Button
               size="sm"
@@ -420,7 +424,7 @@ function DetailContent({ reservation }: { reservation: Reservation }) {
               disabled={update.isPending}
               onClick={() => setCancelConfirmOpen(true)}
             >
-              Cancel
+              {t.common.cancel}
             </Button>
           </>
         )}
@@ -431,7 +435,7 @@ function DetailContent({ reservation }: { reservation: Reservation }) {
             disabled={update.isPending}
             onClick={() => update.mutate({ id: reservation.id, status: 'no_show' })}
           >
-            No show
+            {t.detail.no_show}
           </Button>
         )}
         {reservation.status === 'cancelled' && (
@@ -442,7 +446,7 @@ function DetailContent({ reservation }: { reservation: Reservation }) {
             disabled={revert.isPending}
             onClick={() => revert.mutate(reservation.id)}
           >
-            {revert.isPending ? 'Restoring…' : 'Restore to confirmed'}
+            {revert.isPending ? t.detail.restoring : t.detail.restore}
           </Button>
         )}
       </div>
@@ -452,7 +456,7 @@ function DetailContent({ reservation }: { reservation: Reservation }) {
       {/* Event log */}
       <div className="flex flex-col gap-2">
         <span className="text-[10px] font-medium uppercase tracking-widest text-muted-foreground">
-          Event history
+          {t.detail.event_history}
         </span>
         <EventLog reservationId={reservation.id} />
       </div>
@@ -461,6 +465,7 @@ function DetailContent({ reservation }: { reservation: Reservation }) {
 }
 
 export function ReservationDetail({ reservationId, onClose }: Props) {
+  const t = useT()
   const { data, isLoading } = useReservation(reservationId)
   const reservation = data?.data
 
@@ -468,14 +473,14 @@ export function ReservationDetail({ reservationId, onClose }: Props) {
     <Sheet open={!!reservationId} onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="w-full sm:max-w-md overflow-y-auto">
         <SheetHeader>
-          <SheetTitle className="text-sm">Reservation detail</SheetTitle>
+          <SheetTitle className="text-sm">{t.detail.title}</SheetTitle>
         </SheetHeader>
 
         {isLoading && (
-          <div className="py-8 text-center text-sm text-muted-foreground">Loading…</div>
+          <div className="py-8 text-center text-sm text-muted-foreground">{t.common.loading}</div>
         )}
         {!isLoading && !reservation && (
-          <div className="py-8 text-center text-sm text-muted-foreground">Not found.</div>
+          <div className="py-8 text-center text-sm text-muted-foreground">{t.common.not_found}</div>
         )}
         {reservation && <DetailContent reservation={reservation} />}
       </SheetContent>

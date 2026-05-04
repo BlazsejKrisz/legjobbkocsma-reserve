@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useOverflowCount } from '@/lib/hooks/overflow/useOverflow'
+import { useVenues } from '@/lib/hooks/venues/useVenues'
 import {
   LayoutDashboard,
   CalendarDays,
@@ -24,6 +25,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { AppRole } from '@/lib/types/user'
+import { useT } from '@/lib/i18n/useT'
 
 // ─── Top-level nav ────────────────────────────────────────────────────────────
 
@@ -102,13 +104,6 @@ type VenueNavItem = {
 }
 
 const VENUE_NAV_ITEMS: VenueNavItem[] = [
-  {
-    label: 'Timeline',
-    suffix: '',
-    icon: CalendarRange,
-    roles: ['super_admin', 'support', 'venue_staff'],
-    exact: true,
-  },
   {
     label: 'Reservations',
     suffix: '/reservations',
@@ -202,25 +197,89 @@ function NavLink({
   )
 }
 
+// ─── Timeline nav item ────────────────────────────────────────────────────────
+
+function TimelineNavItem({
+  role,
+  staffVenueId,
+  onClose,
+}: {
+  role: AppRole
+  staffVenueId?: string
+  onClose?: () => void
+}) {
+  const t = useT()
+  const pathname = usePathname()
+  const { data: venuesData } = useVenues()
+  const venues = venuesData?.data ?? []
+
+  const isActive = pathname.match(/^\/dashboard\/venues\/[^/]+(\/)?$/) != null
+
+  // venue_staff: single venue, direct link
+  if (role === 'venue_staff') {
+    if (!staffVenueId) return null
+    return (
+      <NavLink
+        href={`/dashboard/venues/${staffVenueId}`}
+        icon={CalendarRange}
+        label={t.nav.timeline}
+        isActive={isActive}
+        onClose={onClose}
+      />
+    )
+  }
+
+  // multi-venue: link to current venue or first venue
+  const currentVenueId = extractVenueId(pathname) ?? (venues[0] ? String(venues[0].id) : '')
+
+  return (
+    <NavLink
+      href={currentVenueId ? `/dashboard/venues/${currentVenueId}` : '#'}
+      icon={CalendarRange}
+      label={t.nav.timeline}
+      isActive={isActive}
+      onClose={onClose}
+    />
+  )
+}
+
 // ─── Sidebar content ──────────────────────────────────────────────────────────
 
 type SidebarProps = {
   role: AppRole
   initialOverflowCount?: number
+  canSeeOverflow?: boolean
+  staffVenueId?: string
   onClose?: () => void
 }
 
-const ROLE_LABELS: Record<AppRole, string> = {
-  super_admin: 'Super Admin',
-  support: 'Support',
-  venue_staff: 'Venue Staff',
-}
-
-export function SidebarContent({ role, initialOverflowCount, onClose }: SidebarProps) {
-  const { data: liveCount } = useOverflowCount(initialOverflowCount)
+export function SidebarContent({ role, initialOverflowCount, canSeeOverflow = false, staffVenueId, onClose }: SidebarProps) {
+  const t = useT()
+  const { data: liveCount } = useOverflowCount(initialOverflowCount, canSeeOverflow)
   const overflowCount = liveCount ?? initialOverflowCount ?? 0
   const pathname = usePathname()
-  const venueId = extractVenueId(pathname)
+  const venueId = extractVenueId(pathname) ?? staffVenueId ?? null
+
+  const NAV_LABELS: Record<string, string> = {
+    '/dashboard': t.nav.dashboard,
+    '/dashboard/reservations': t.nav.reservations,
+    '/dashboard/overflow': t.nav.overflow,
+    '/dashboard/venues': t.nav.venues,
+    '/dashboard/users': t.nav.users,
+    '/dashboard/venue-groups': t.nav.venue_groups,
+    '/dashboard/customers': t.nav.customers,
+    '/dashboard/stats': t.nav.statistics,
+    '/dashboard/embed': t.nav.embed_analytics,
+  }
+
+  const VENUE_LABELS: Record<string, string> = {
+    '/reservations': t.venue_nav.reservations,
+    '/tables': t.venue_nav.tables,
+    '/table-types': t.venue_nav.table_types,
+    '/settings': t.venue_nav.settings,
+    '/open-hours': t.venue_nav.open_hours,
+    '/integrations': t.venue_nav.integrations,
+  }
 
   const visibleTopItems = NAV_ITEMS.filter((item) => item.roles.includes(role))
   const visibleVenueItems = venueId
@@ -270,13 +329,15 @@ export function SidebarContent({ role, initialOverflowCount, onClose }: SidebarP
               key={item.href}
               href={item.href}
               icon={item.icon}
-              label={item.label}
+              label={NAV_LABELS[item.href] ?? item.label}
               isActive={isActive}
               badge={isOverflow ? overflowCount : undefined}
               onClose={onClose}
             />
           )
         })}
+
+        <TimelineNavItem role={role} staffVenueId={staffVenueId} onClose={onClose} />
 
         {/* Venue sub-nav */}
         {venueId && visibleVenueItems.length > 0 && (
@@ -296,7 +357,7 @@ export function SidebarContent({ role, initialOverflowCount, onClose }: SidebarP
                     key={item.suffix}
                     href={href}
                     icon={item.icon}
-                    label={item.label}
+                    label={VENUE_LABELS[item.suffix] ?? item.label}
                     isActive={isActive}
                     indent
                     onClose={onClose}
@@ -313,7 +374,7 @@ export function SidebarContent({ role, initialOverflowCount, onClose }: SidebarP
         <div className="flex items-center gap-2 rounded-lg border border-border bg-background/60 px-3 py-2.5">
           <div className="h-2 w-2 rounded-full bg-primary" />
           <span className="text-[11px] font-medium text-muted-foreground">
-            {ROLE_LABELS[role]}
+            {t.role[role]}
           </span>
         </div>
       </div>

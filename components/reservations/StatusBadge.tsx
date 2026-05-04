@@ -1,5 +1,8 @@
+'use client'
+
 import { cn } from '@/lib/utils'
-import { STATUS_CLASSES, STATUS_LABELS } from '@/lib/domain/reservation'
+import { STATUS_CLASSES } from '@/lib/domain/reservation'
+import { useT } from '@/lib/i18n/useT'
 import type { ReservationStatus } from '@/lib/types/reservation'
 
 type Props = {
@@ -8,6 +11,8 @@ type Props = {
 }
 
 export function StatusBadge({ status, className }: Props) {
+  const t = useT()
+  const label = t.status[status as keyof typeof t.status] ?? status
   return (
     <span
       className={cn(
@@ -16,7 +21,7 @@ export function StatusBadge({ status, className }: Props) {
         className,
       )}
     >
-      {STATUS_LABELS[status] ?? status}
+      {label}
     </span>
   )
 }

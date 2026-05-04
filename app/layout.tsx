@@ -3,7 +3,8 @@ import { Geist } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
-import { QueryProvider } from "@/components/query-provider";
+import { QueryProvider } from "@/components/query-provider"
+import { LangProvider } from "@/lib/i18n/context";
 
 const defaultUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
@@ -39,8 +40,10 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <QueryProvider>
-          {children}
-          <Toaster />
+            <LangProvider>
+              {children}
+              <Toaster />
+            </LangProvider>
           </QueryProvider>
         </ThemeProvider>
       </body>

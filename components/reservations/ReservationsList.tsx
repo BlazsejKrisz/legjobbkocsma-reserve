@@ -17,7 +17,7 @@ import { ReservationDetail } from './ReservationDetail'
 import { CreateReservationDialog } from './CreateReservationDialog'
 import { useReservations } from '@/lib/hooks/reservations/useReservations'
 import { formatTimeRange, formatDateYYYYMMDD, formatTimeHHMM, dayWindowUTC } from '@/lib/datetime'
-import { SOURCE_LABELS } from '@/lib/domain/reservation'
+import { useT } from '@/lib/i18n/useT'
 import type { Venue } from '@/lib/types/venue'
 import type { TableType } from '@/lib/types/table'
 
@@ -34,6 +34,7 @@ export function ReservationsList({
   tableTypes,
   defaultVenueId,
 }: Props) {
+  const t = useT()
   const [filters, setFilters] = useState<ReservationFilterState>({
     ...DEFAULT_FILTERS,
     venueId: defaultVenueId ?? '',
@@ -75,7 +76,7 @@ export function ReservationsList({
         />
         <Button size="sm" onClick={() => setCreateOpen(true)} className="h-8">
           <Plus className="mr-1.5 h-3.5 w-3.5" />
-          New reservation
+          {t.reservations_list.new_reservation}
         </Button>
       </div>
 
@@ -92,14 +93,14 @@ export function ReservationsList({
           <TableHeader>
             <TableRow className="h-9">
               <TableHead className="text-xs">
-                {filters.sortBy === 'created_at' ? 'Date & time' : 'Date & time'}
+                {t.reservations_list.date_time}
               </TableHead>
-              <TableHead className="text-xs">Customer</TableHead>
-              <TableHead className="text-xs">Venue</TableHead>
-              <TableHead className="text-xs">Guests</TableHead>
-              <TableHead className="text-xs">Tables</TableHead>
-              <TableHead className="text-xs">Source</TableHead>
-              <TableHead className="text-xs">Status</TableHead>
+              <TableHead className="text-xs">{t.reservations_list.customer}</TableHead>
+              <TableHead className="text-xs">{t.reservations_list.venue}</TableHead>
+              <TableHead className="text-xs">{t.reservations_list.guests}</TableHead>
+              <TableHead className="text-xs">{t.reservations_list.tables}</TableHead>
+              <TableHead className="text-xs">{t.reservations_list.source}</TableHead>
+              <TableHead className="text-xs">{t.reservations_list.status}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -118,7 +119,7 @@ export function ReservationsList({
                   colSpan={7}
                   className="py-8 text-center text-sm text-muted-foreground"
                 >
-                  No reservations found.
+                  {t.reservations_list.no_reservations}
                 </TableCell>
               </TableRow>
             )}
@@ -139,7 +140,7 @@ export function ReservationsList({
                       </span>
                       <br />
                       <span className="text-muted-foreground/60 text-[10px]">
-                        Received: {formatDateYYYYMMDD(r.created_at)} {formatTimeHHMM(r.created_at)}
+                        {t.reservations_list.received}: {formatDateYYYYMMDD(r.created_at)} {formatTimeHHMM(r.created_at)}
                       </span>
                     </>
                   ) : (
@@ -171,7 +172,7 @@ export function ReservationsList({
                   })()}
                 </TableCell>
                 <TableCell className="text-xs text-muted-foreground">
-                  {SOURCE_LABELS[r.source] ?? r.source}
+                  {t.source[r.source] ?? r.source}
                 </TableCell>
                 <TableCell>
                   <StatusBadge status={r.status} />

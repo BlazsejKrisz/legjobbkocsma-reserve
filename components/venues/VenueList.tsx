@@ -15,12 +15,14 @@ import {
 import { CreateVenueDialog } from './VenueForm'
 import { useVenues } from '@/lib/hooks/venues/useVenues'
 import { cn } from '@/lib/utils'
+import { useT } from '@/lib/i18n/useT'
 
 type Props = {
   isSuperAdmin: boolean
 }
 
 export function VenueList({ isSuperAdmin }: Props) {
+  const t = useT()
   const [createOpen, setCreateOpen] = useState(false)
   const { data, isLoading } = useVenues()
   const venues = data?.data ?? []
@@ -29,11 +31,11 @@ export function VenueList({ isSuperAdmin }: Props) {
     <div className="flex flex-col gap-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-medium">Venues</h2>
+        <h2 className="text-sm font-medium">{t.venues.title}</h2>
         {isSuperAdmin && (
           <Button size="sm" className="h-8" onClick={() => setCreateOpen(true)}>
             <Plus className="mr-1.5 h-3.5 w-3.5" />
-            New venue
+            {t.venues.new_venue}
           </Button>
         )}
       </div>
@@ -43,10 +45,10 @@ export function VenueList({ isSuperAdmin }: Props) {
         <Table>
           <TableHeader>
             <TableRow className="h-9">
-              <TableHead className="text-xs">Name</TableHead>
-              <TableHead className="text-xs">Slug</TableHead>
-              <TableHead className="text-xs">Status</TableHead>
-              <TableHead className="text-xs text-right">Actions</TableHead>
+              <TableHead className="text-xs">{t.venues.name}</TableHead>
+              <TableHead className="text-xs">{t.venues.slug}</TableHead>
+              <TableHead className="text-xs">{t.venues.status}</TableHead>
+              <TableHead className="text-xs text-right">{t.venues.actions}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -62,7 +64,7 @@ export function VenueList({ isSuperAdmin }: Props) {
             {!isLoading && venues.length === 0 && (
               <TableRow>
                 <TableCell colSpan={4} className="py-8 text-center text-sm text-muted-foreground">
-                  No venues yet.
+                  {t.venues.no_venues}
                 </TableCell>
               </TableRow>
             )}
@@ -80,7 +82,7 @@ export function VenueList({ isSuperAdmin }: Props) {
                       )}
                     />
                     <span className="text-xs text-muted-foreground">
-                      {v.is_active ? 'Active' : 'Inactive'}
+                      {v.is_active ? t.venues.active : t.venues.inactive}
                     </span>
                   </div>
                 </TableCell>
@@ -89,14 +91,14 @@ export function VenueList({ isSuperAdmin }: Props) {
                     <Button variant="ghost" size="sm" className="h-7 text-xs" asChild>
                       <Link href={`/dashboard/venues/${v.id}`}>
                         <ChevronRight className="h-3.5 w-3.5 mr-1" />
-                        View
+                        {t.venues.view}
                       </Link>
                     </Button>
                     {isSuperAdmin && (
                       <Button variant="ghost" size="sm" className="h-7 text-xs" asChild>
                         <Link href={`/dashboard/venues/${v.id}/settings`}>
                           <Settings className="h-3.5 w-3.5 mr-1" />
-                          Settings
+                          {t.venues.settings}
                         </Link>
                       </Button>
                     )}

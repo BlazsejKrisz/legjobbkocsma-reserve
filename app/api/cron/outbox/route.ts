@@ -16,8 +16,8 @@ const BATCH_SIZE = 20
  * server-admin Supabase client.
  */
 export async function POST(req: Request) {
-  const secret = req.headers.get('x-cron-secret')
-  if (secret !== process.env.CRON_SECRET) {
+  const auth = req.headers.get('authorization')
+  if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
     return err('Unauthorized', { status: 401 })
   }
 

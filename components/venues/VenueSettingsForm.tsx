@@ -10,6 +10,7 @@ import { Switch } from '@/components/ui/switch'
 import { Separator } from '@/components/ui/separator'
 import { useVenueSettings, useUpdateVenueSettings } from '@/lib/hooks/venues/useVenues'
 import { VenueSettingsSchema, type VenueSettingsPayload } from '@/lib/validators/venues'
+import { useT } from '@/lib/i18n/useT'
 
 type Props = {
   venueId: string
@@ -36,6 +37,7 @@ const DEFAULTS: VenueSettingsPayload = {
 }
 
 export function VenueSettingsForm({ venueId, readOnly }: Props) {
+  const t = useT()
   const { data, isLoading } = useVenueSettings(venueId)
   const update = useUpdateVenueSettings(venueId)
 
@@ -55,84 +57,84 @@ export function VenueSettingsForm({ venueId, readOnly }: Props) {
   }, [data, reset])
 
   if (isLoading) {
-    return <div className="py-8 text-center text-sm text-muted-foreground">Loading settings…</div>
+    return <div className="py-8 text-center text-sm text-muted-foreground">{t.venue_settings.loading}</div>
   }
 
   return (
     <form onSubmit={handleSubmit((v) => update.mutate(v))} className="space-y-6">
-      <Section title="Booking controls">
-        <ToggleField control={control} name="booking_enabled" label="Booking enabled"
-          description="Allow new reservations to be created at this venue." disabled={readOnly} />
-        <ToggleField control={control} name="auto_assignment_enabled" label="Auto-assignment enabled"
-          description="When enabled, the system tries to assign a table automatically. When disabled, all bookings go straight to the overflow queue." disabled={readOnly} />
-        <ToggleField control={control} name="overflow_queue_enabled" label="Overflow queue enabled"
-          description="When enabled, unresolvable reservations land in the manual review queue instead of being rejected." disabled={readOnly} />
+      <Section title={t.venue_settings.booking_controls}>
+        <ToggleField control={control} name="booking_enabled" label={t.venue_settings.booking_enabled}
+          description={t.venue_settings.booking_enabled_desc} disabled={readOnly} />
+        <ToggleField control={control} name="auto_assignment_enabled" label={t.venue_settings.auto_assignment}
+          description={t.venue_settings.auto_assignment_desc} disabled={readOnly} />
+        <ToggleField control={control} name="overflow_queue_enabled" label={t.venue_settings.overflow_queue}
+          description={t.venue_settings.overflow_queue_desc} disabled={readOnly} />
       </Section>
 
       <Separator />
 
-      <Section title="Duration">
-        <NumberField register={register} name="default_duration_minutes" label="Default duration (min)"
-          hint="Used when the guest doesn't specify an end time." errors={errors} disabled={readOnly} />
-        <NumberField register={register} name="min_duration_minutes" label="Min duration (min)"
-          hint="Shortest booking slot accepted." errors={errors} disabled={readOnly} />
-        <NumberField register={register} name="max_duration_minutes" label="Max duration (min)"
-          hint="Longest booking slot accepted." errors={errors} disabled={readOnly} />
-        <NumberField register={register} name="last_booking_before_close_minutes" label="Last booking before close (min)"
-          hint="Latest a booking can start before closing. Must be between min and max duration. Leave empty to use min duration." errors={errors} disabled={readOnly} />
+      <Section title={t.venue_settings.duration}>
+        <NumberField register={register} name="default_duration_minutes" label={t.venue_settings.default_duration}
+          hint={t.venue_settings.default_duration_hint} errors={errors} disabled={readOnly} />
+        <NumberField register={register} name="min_duration_minutes" label={t.venue_settings.min_duration}
+          hint={t.venue_settings.min_duration_hint} errors={errors} disabled={readOnly} />
+        <NumberField register={register} name="max_duration_minutes" label={t.venue_settings.max_duration}
+          hint={t.venue_settings.max_duration_hint} errors={errors} disabled={readOnly} />
+        <NumberField register={register} name="last_booking_before_close_minutes" label={t.venue_settings.last_booking}
+          hint={t.venue_settings.last_booking_hint} errors={errors} disabled={readOnly} />
       </Section>
 
       <Separator />
 
-      <Section title="Booking window">
-        <NumberField register={register} name="min_notice_minutes" label="Min notice (min)"
-          hint="How far in advance a booking must be made. 0 = same-minute walk-ins allowed." errors={errors} disabled={readOnly} />
-        <NumberField register={register} name="max_advance_booking_days" label="Max advance booking (days)"
-          hint="How far ahead guests can book." errors={errors} disabled={readOnly} />
+      <Section title={t.venue_settings.booking_window}>
+        <NumberField register={register} name="min_notice_minutes" label={t.venue_settings.min_notice}
+          hint={t.venue_settings.min_notice_hint} errors={errors} disabled={readOnly} />
+        <NumberField register={register} name="max_advance_booking_days" label={t.venue_settings.max_advance}
+          hint={t.venue_settings.max_advance_hint} errors={errors} disabled={readOnly} />
       </Section>
 
       <Separator />
 
-      <Section title="Capacity">
-        <NumberField register={register} name="max_party_size" label="Max party size"
-          hint="Largest party accepted for a single reservation." errors={errors} disabled={readOnly} />
-        <NumberField register={register} name="max_total_capacity" label="Max total capacity"
-          hint="Venue-wide concurrent guest cap across all confirmed reservations." errors={errors} disabled={readOnly} />
+      <Section title={t.venue_settings.capacity}>
+        <NumberField register={register} name="max_party_size" label={t.venue_settings.max_party_size}
+          hint={t.venue_settings.max_party_size_hint} errors={errors} disabled={readOnly} />
+        <NumberField register={register} name="max_total_capacity" label={t.venue_settings.max_total_capacity}
+          hint={t.venue_settings.max_total_capacity_hint} errors={errors} disabled={readOnly} />
       </Section>
 
       <Separator />
 
-      <Section title="Buffers">
-        <NumberField register={register} name="booking_buffer_before_minutes" label="Buffer before (min)"
-          hint="Gap required before a reservation starts (cleaning / setup time)." errors={errors} disabled={readOnly} />
-        <NumberField register={register} name="booking_buffer_after_minutes" label="Buffer after (min)"
-          hint="Gap required after a reservation ends before the table is available again." errors={errors} disabled={readOnly} />
+      <Section title={t.venue_settings.buffers}>
+        <NumberField register={register} name="booking_buffer_before_minutes" label={t.venue_settings.buffer_before}
+          hint={t.venue_settings.buffer_before_hint} errors={errors} disabled={readOnly} />
+        <NumberField register={register} name="booking_buffer_after_minutes" label={t.venue_settings.buffer_after}
+          hint={t.venue_settings.buffer_after_hint} errors={errors} disabled={readOnly} />
       </Section>
 
       <Separator />
 
-      <Section title="Table blending">
-        <ToggleField control={control} name="allow_combining_tables" label="Allow combining tables"
-          description="When no single table fits the party, the system can merge adjacent tables in the same blend group. Tables must have can_blend enabled and share a blend_group value."
+      <Section title={t.venue_settings.table_blending}>
+        <ToggleField control={control} name="allow_combining_tables" label={t.venue_settings.combining_tables}
+          description={t.venue_settings.combining_tables_desc}
           disabled={readOnly} />
-        <ToggleField control={control} name="allow_cross_group_table_blending" label="Allow cross-group blending"
-          description="Extends combining to tables across different blend groups (last resort). Only applies if Allow combining tables is also enabled."
+        <ToggleField control={control} name="allow_cross_group_table_blending" label={t.venue_settings.cross_group_blending}
+          description={t.venue_settings.cross_group_blending_desc}
           disabled={readOnly} />
       </Section>
 
       <Separator />
 
-      <Section title="Suggestions">
-        <ToggleField control={control} name="allow_alternative_time_suggestions" label="Alternative time suggestions"
-          description="When the requested slot is unavailable, offer nearby time slots at the same venue." disabled={readOnly} />
-        <ToggleField control={control} name="allow_cross_venue_suggestions" label="Cross-venue suggestions"
-          description="When no slot is available at the requested venue, suggest availability at other venues." disabled={readOnly} />
+      <Section title={t.venue_settings.suggestions}>
+        <ToggleField control={control} name="allow_alternative_time_suggestions" label={t.venue_settings.alt_time}
+          description={t.venue_settings.alt_time_desc} disabled={readOnly} />
+        <ToggleField control={control} name="allow_cross_venue_suggestions" label={t.venue_settings.cross_venue}
+          description={t.venue_settings.cross_venue_desc} disabled={readOnly} />
       </Section>
 
       {!readOnly && (
         <div className="flex justify-end pt-2">
           <Button type="submit" disabled={update.isPending || !isDirty}>
-            {update.isPending ? 'Saving…' : 'Save settings'}
+            {update.isPending ? t.common.saving : t.common.save}
           </Button>
         </div>
       )}

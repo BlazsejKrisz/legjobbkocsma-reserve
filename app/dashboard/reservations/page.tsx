@@ -4,6 +4,7 @@ import { ReservationsList } from '@/components/reservations/ReservationsList'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import type { TableType } from '@/lib/types/table'
+import { getServerT } from '@/lib/i18n/serverT'
 
 async function listAllTableTypes(): Promise<TableType[]> {
   const supabase = await createClient()
@@ -20,19 +21,18 @@ export default async function ReservationsPage() {
   const session = await getSession()
   if (!session) redirect('/auth/login')
 
-  const [venues, tableTypes] = await Promise.all([
+  const [venues, tableTypes, t] = await Promise.all([
     listVenues(session),
     listAllTableTypes(),
+    getServerT(),
   ])
 
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Reservations</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t.reservations_page.title}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          All reservations across venues. Use the date presets or custom range to narrow the list,
-          filter by status or source, or search by customer name. Click any row to view full details
-          and make changes.
+          {t.reservations_page.subtitle}
         </p>
       </div>
 

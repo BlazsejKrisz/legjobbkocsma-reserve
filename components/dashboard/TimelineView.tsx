@@ -16,7 +16,7 @@ import {
   getTimelinePlacement,
   buildHourTicks,
 } from '@/lib/datetime'
-import { STATUS_LABELS } from '@/lib/domain/reservation'
+import { useT } from '@/lib/i18n/useT'
 import type { TableType } from '@/lib/types/table'
 import type { Reservation } from '@/lib/types/reservation'
 import type { Venue, VenueOpenHours, Weekday } from '@/lib/types/venue'
@@ -77,6 +77,7 @@ type CreatePrefill = {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export function TimelineView({ venueId, venues, tableTypes }: Props) {
+  const t = useT()
   const [date, setDate] = useState(todayYYYYMMDD)
   const [selectedReservationId, setSelectedReservationId] = useState<string | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
@@ -187,11 +188,11 @@ export function TimelineView({ venueId, venues, tableTypes }: Props) {
           className="h-7 text-xs"
           onClick={() => setDate(todayYYYYMMDD())}
         >
-          Today
+          {t.timeline.today}
         </Button>
 
         {resLoading && (
-          <span className="text-xs text-muted-foreground animate-pulse">Loading…</span>
+          <span className="text-xs text-muted-foreground animate-pulse">{t.timeline.loading}</span>
         )}
       </div>
 
@@ -199,7 +200,7 @@ export function TimelineView({ venueId, venues, tableTypes }: Props) {
       {isClosed && (
         <div className="flex items-center gap-2 rounded-md border border-border bg-muted/30 px-4 py-2.5 text-xs text-muted-foreground">
           <MoonStar className="h-3.5 w-3.5 shrink-0" />
-          <span>Venue is closed on this day according to open hours.</span>
+          <span>{t.timeline.venue_closed}</span>
         </div>
       )}
 
@@ -346,7 +347,7 @@ export function TimelineView({ venueId, venues, tableTypes }: Props) {
                               title={[
                                 r.customers?.full_name ?? 'Walk-in',
                                 `${r.party_size} guests`,
-                                STATUS_LABELS[r.status],
+                                t.status[r.status],
                               ].join(' · ')}
                             >
                               {placement.widthPct > 3 && (
@@ -372,7 +373,7 @@ export function TimelineView({ venueId, venues, tableTypes }: Props) {
                   className="flex items-center justify-center text-xs text-muted-foreground w-full"
                   style={{ height: ROW_HEIGHT * 4 }}
                 >
-                  No active tables configured for this venue.
+                  {t.timeline.no_tables}
                 </div>
               )}
             </div>
@@ -392,11 +393,11 @@ export function TimelineView({ venueId, venues, tableTypes }: Props) {
         ).map(([status, cls]) => (
           <span key={status} className={cn('text-[10px] flex items-center gap-1', cls)}>
             <span className={cn('inline-block h-2 w-2 rounded-sm border', BLOCK_BG[status])} />
-            {STATUS_LABELS[status as keyof typeof STATUS_LABELS]}
+            {t.status[status]}
           </span>
         ))}
         <span className="text-[10px] text-muted-foreground ml-auto hidden sm:inline">
-          Click an empty slot to create a reservation
+          {t.timeline.click_to_create}
         </span>
       </div>
 

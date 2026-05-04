@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useCreateVenue } from '@/lib/hooks/venues/useVenues'
 import { CreateVenueSchema, type CreateVenuePayload } from '@/lib/validators/venues'
+import { useT } from '@/lib/i18n/useT'
 
 type Props = {
   open: boolean
@@ -21,6 +22,7 @@ type Props = {
 }
 
 export function CreateVenueDialog({ open, onClose }: Props) {
+  const t = useT()
   const create = useCreateVenue()
 
   const {
@@ -45,27 +47,27 @@ export function CreateVenueDialog({ open, onClose }: Props) {
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Create venue</DialogTitle>
+          <DialogTitle>{t.venues.create_title}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-2">
           <div className="flex flex-col gap-1.5">
-            <Label className="text-xs">Name</Label>
-            <Input {...register('name')} className="h-9 text-sm" placeholder="My Venue" />
+            <Label className="text-xs">{t.venues.name}</Label>
+            <Input {...register('name')} className="h-9 text-sm" placeholder={t.venues.name_placeholder} />
             {errors.name && (
               <p className="text-[11px] text-red-400">{errors.name.message}</p>
             )}
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label className="text-xs">Slug</Label>
+            <Label className="text-xs">{t.venues.slug}</Label>
             <Input
               {...register('slug')}
               className="h-9 text-sm"
-              placeholder="my-venue"
+              placeholder={t.venues.slug_placeholder}
             />
             <p className="text-[10px] text-muted-foreground">
-              Lowercase letters, numbers and hyphens only.
+              {t.venues.slug_hint}
             </p>
             {errors.slug && (
               <p className="text-[11px] text-red-400">{errors.slug.message}</p>
@@ -74,10 +76,10 @@ export function CreateVenueDialog({ open, onClose }: Props) {
 
           <DialogFooter className="pt-2">
             <Button type="button" variant="ghost" onClick={onClose}>
-              Cancel
+              {t.common.cancel}
             </Button>
             <Button type="submit" disabled={create.isPending}>
-              {create.isPending ? 'Creating…' : 'Create'}
+              {create.isPending ? t.common.creating : t.common.create}
             </Button>
           </DialogFooter>
         </form>

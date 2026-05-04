@@ -5,6 +5,7 @@ import ThemeToggle from '@/components/theme-switcher'
 import { SidebarContent } from './Sidebar'
 import { MobileNav } from './MobileNav'
 import { OverflowRealtimeSync } from './OverflowRealtimeSync'
+import { LanguageSwitcher } from './LanguageSwitcher'
 import { getSession } from '@/lib/auth/getSession'
 import { createClient } from '@/lib/supabase/server'
 
@@ -32,8 +33,9 @@ export default async function DashboardShell({
     redirect('/auth/login')
   }
 
-  const overflowCount = await getOverflowCount()
   const canSeeOverflow = session.isSuperAdmin || session.isSupport
+  const overflowCount = canSeeOverflow ? await getOverflowCount() : 0
+  const staffVenueId = session.venueIds?.[0]
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
@@ -42,7 +44,7 @@ export default async function DashboardShell({
 
       {/* Sidebar – desktop */}
       <aside className="hidden w-60 shrink-0 border-r border-border/60 md:flex md:flex-col">
-        <SidebarContent role={session.role} initialOverflowCount={overflowCount} />
+        <SidebarContent role={session.role} initialOverflowCount={overflowCount} canSeeOverflow={canSeeOverflow} staffVenueId={staffVenueId} />
       </aside>
 
       {/* Main area */}
@@ -50,7 +52,7 @@ export default async function DashboardShell({
         {/* Top bar */}
         <header className="flex h-13 items-center justify-between border-b border-border/60 bg-background px-4 md:px-6" style={{ height: '52px' }}>
           <div className="flex items-center gap-3 md:hidden">
-            <MobileNav role={session.role} initialOverflowCount={overflowCount} />
+            <MobileNav role={session.role} initialOverflowCount={overflowCount} canSeeOverflow={canSeeOverflow} staffVenueId={staffVenueId} />
             <span className="text-sm font-semibold">
               Legjobb<span className="text-primary">Kocsma</span>
             </span>
@@ -58,6 +60,8 @@ export default async function DashboardShell({
           {/* Desktop left — intentionally empty; sidebar has the brand */}
           <div className="hidden md:block" />
           <div className="flex items-center gap-1.5">
+            <LanguageSwitcher />
+            <div className="mx-1 h-4 w-px bg-border" />
             <ThemeToggle />
             <div className="mx-1 h-4 w-px bg-border" />
             <LogoutButton />

@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { OutboxDashboard } from '@/components/integrations/OutboxDashboard'
+import { getServerT } from '@/lib/i18n/serverT'
 
 type Params = { params: Promise<{ venueId: string }> }
 
@@ -17,10 +18,12 @@ export default async function IntegrationsPage({ params }: Params) {
   if (!session) redirect('/auth/login')
   if (!session.isSuperAdmin) redirect(`/dashboard/venues/${venueId}`)
 
-  const venue = await getVenue(venueId)
+  const [venue, integrations, t] = await Promise.all([
+    getVenue(venueId),
+    getVenueIntegrations(venueId),
+    getServerT(),
+  ])
   if (!venue) notFound()
-
-  const integrations = await getVenueIntegrations(venueId)
 
   return (
     <div className="flex flex-col gap-5 max-w-2xl">
@@ -34,15 +37,14 @@ export default async function IntegrationsPage({ params }: Params) {
       </div>
 
       <div>
-        <h1 className="text-lg font-semibold">Integrations</h1>
+        <h1 className="text-lg font-semibold">{t.integrations_page.title}</h1>
         <p className="text-sm text-muted-foreground">{venue.name}</p>
       </div>
 
-      {/* Configured integrations */}
       {integrations.length > 0 && (
         <div className="space-y-3">
           <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-            Configured integrations
+            {t.integrations_page.configured}
           </h2>
           {integrations.map((intg) => (
             <Card key={intg.id} className="bg-muted/30 border-border">
@@ -56,14 +58,14 @@ export default async function IntegrationsPage({ params }: Params) {
                         : 'bg-zinc-500/15 text-zinc-400 text-[10px]'
                     }
                   >
-                    {intg.is_enabled ? 'Enabled' : 'Disabled'}
+                    {intg.is_enabled ? t.integrations_page.enabled : t.integrations_page.disabled}
                   </Badge>
                 </div>
               </CardHeader>
               <CardContent className="px-4 pb-3 pt-0 space-y-1">
                 {intg.external_location_id && (
                   <p className="text-[11px] text-muted-foreground">
-                    Location ID: <span className="font-mono">{intg.external_location_id}</span>
+                    {t.integrations_page.location_id} <span className="font-mono">{intg.external_location_id}</span>
                   </p>
                 )}
                 {intg.config && Object.keys(intg.config).length > 0 && (
@@ -77,22 +79,21 @@ export default async function IntegrationsPage({ params }: Params) {
         </div>
       )}
 
-      {/* Available integrations */}
       {integrations.length === 0 && (
         <div className="space-y-3">
           <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-            Available integrations
+            {t.integrations_page.available}
           </h2>
           <Card className="bg-muted/20 border-dashed border-border">
             <CardHeader className="pb-2 pt-3 px-4">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm font-medium">Fruit</CardTitle>
-                <Badge className="bg-zinc-500/15 text-zinc-400 text-[10px]">Not configured</Badge>
+                <Badge className="bg-zinc-500/15 text-zinc-400 text-[10px]">{t.integrations_page.not_configured}</Badge>
               </div>
             </CardHeader>
             <CardContent className="px-4 pb-3 pt-0">
               <p className="text-xs text-muted-foreground">
-                Connect Fruit to sync reservations and availability.
+                {t.integrations_page.fruit_desc}
               </p>
             </CardContent>
           </Card>
@@ -101,7 +102,6 @@ export default async function IntegrationsPage({ params }: Params) {
 
       <Separator />
 
-      {/* Outbox delivery dashboard */}
       <OutboxDashboard venueId={venueId} />
     </div>
   )

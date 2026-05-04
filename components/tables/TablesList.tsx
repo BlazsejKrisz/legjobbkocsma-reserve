@@ -40,6 +40,7 @@ import {
 } from '@/lib/hooks/venues/useTables'
 import { UpsertTableSchema, type UpsertTablePayload } from '@/lib/validators/tables'
 import type { Table as TableRow_ } from '@/lib/types/table'
+import { useT } from '@/lib/i18n/useT'
 
 type Props = { venueId: string }
 
@@ -54,6 +55,7 @@ function TableDialog({
   editing: TableRow_ | null
   onClose: () => void
 }) {
+  const t = useT()
   const { data: typesData } = useTableTypes(venueId)
   const tableTypes = typesData?.data ?? []
 
@@ -91,28 +93,28 @@ function TableDialog({
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{editing ? 'Edit table' : 'New table'}</DialogTitle>
+          <DialogTitle>{editing ? t.tables.edit_table : t.tables.new_table}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-2">
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5 col-span-2">
-              <Label className="text-xs">Name</Label>
-              <Input {...register('name')} className="h-9 text-sm" placeholder="e.g. Table 1" />
+              <Label className="text-xs">{t.tables.name}</Label>
+              <Input {...register('name')} className="h-9 text-sm" placeholder={t.tables.name_placeholder} />
               {errors.name && <p className="text-xs text-red-400">{errors.name.message}</p>}
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs">Min capacity</Label>
+              <Label className="text-xs">{t.tables.min_capacity}</Label>
               <Input type="number" min={1} {...register('capacity_min', { valueAsNumber: true })} className="h-9 text-sm" />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs">Max capacity</Label>
+              <Label className="text-xs">{t.tables.max_capacity}</Label>
               <Input type="number" min={1} {...register('capacity_max', { valueAsNumber: true })} className="h-9 text-sm" />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs">Type</Label>
+              <Label className="text-xs">{t.tables.type}</Label>
               <Select
                 value={watch('table_type_id') ?? '__none'}
                 onValueChange={(v: string) =>
@@ -120,35 +122,32 @@ function TableDialog({
                 }
               >
                 <SelectTrigger className="h-9 text-sm">
-                  <SelectValue placeholder="No type" />
+                  <SelectValue placeholder={t.tables.no_type} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__none">No type</SelectItem>
-                  {tableTypes.filter((t) => t.is_active).map((t) => (
-                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                  <SelectItem value="__none">{t.tables.no_type}</SelectItem>
+                  {tableTypes.filter((tt) => tt.is_active).map((tt) => (
+                    <SelectItem key={tt.id} value={tt.id}>{tt.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs">Area</Label>
-              <Input {...register('area')} className="h-9 text-sm" placeholder="e.g. Main floor" />
+              <Label className="text-xs">{t.tables.area}</Label>
+              <Input {...register('area')} className="h-9 text-sm" placeholder={t.tables.area_placeholder} />
             </div>
           </div>
 
           <div className="space-y-3 border-t border-border pt-3">
-            <p className="text-xs font-medium text-muted-foreground">Blending</p>
-            <p className="text-[11px] text-muted-foreground">
-              Tables in the same blend group can be combined for large parties. Contiguous tables
-              (by sort order) within a group are merged first.
-            </p>
+            <p className="text-xs font-medium text-muted-foreground">{t.tables.blending}</p>
+            <p className="text-[11px] text-muted-foreground">{t.tables.blending_desc}</p>
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1.5">
-                <Label className="text-xs">Blend group</Label>
-                <Input {...register('blend_group')} className="h-9 text-sm" placeholder="e.g. main-floor" />
+                <Label className="text-xs">{t.tables.blend_group}</Label>
+                <Input {...register('blend_group')} className="h-9 text-sm" placeholder={t.tables.blend_group_placeholder} />
               </div>
               <div className="flex items-center justify-between gap-4 pt-4">
-                <Label className="text-sm">Can blend</Label>
+                <Label className="text-sm">{t.tables.can_blend}</Label>
                 <Switch
                   checked={watch('can_blend')}
                   onCheckedChange={(v) => setValue('can_blend', v)}
@@ -158,7 +157,7 @@ function TableDialog({
           </div>
 
           <div className="flex items-center justify-between border-t border-border pt-3">
-            <Label className="text-sm">Active</Label>
+            <Label className="text-sm">{t.tables.active}</Label>
             <Switch
               checked={watch('is_active')}
               onCheckedChange={(v) => setValue('is_active', v)}
@@ -166,9 +165,9 @@ function TableDialog({
           </div>
 
           <DialogFooter className="pt-2">
-            <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
+            <Button type="button" variant="ghost" onClick={onClose}>{t.common.cancel}</Button>
             <Button type="submit" disabled={isPending}>
-              {isPending ? 'Saving…' : editing ? 'Save' : 'Create'}
+              {isPending ? t.common.saving : editing ? t.common.save_short : t.common.create}
             </Button>
           </DialogFooter>
         </form>
@@ -180,25 +179,25 @@ function TableDialog({
 // ─── Deactivate confirmation ──────────────────────────────────────────────────
 
 function DeactivateRow({ venueId, tableId, onDone }: { venueId: string; tableId: string; onDone: () => void }) {
+  const t = useT()
   const deactivate = useDeactivateTable(venueId)
   return (
     <Dialog open onOpenChange={(o) => !o && onDone()}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Deactivate table?</DialogTitle>
+          <DialogTitle>{t.tables.deactivate_title}</DialogTitle>
         </DialogHeader>
         <p className="text-sm text-muted-foreground py-2">
-          The table will no longer be available for auto-assignment. Existing confirmed reservations
-          are not affected.
+          {t.tables.deactivate_desc}
         </p>
         <DialogFooter>
-          <Button variant="ghost" onClick={onDone}>Cancel</Button>
+          <Button variant="ghost" onClick={onDone}>{t.common.cancel}</Button>
           <Button
             variant="destructive"
             disabled={deactivate.isPending}
             onClick={() => deactivate.mutate(tableId, { onSuccess: onDone })}
           >
-            {deactivate.isPending ? 'Deactivating…' : 'Deactivate'}
+            {deactivate.isPending ? t.tables.deactivating : t.tables.deactivate}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -217,6 +216,7 @@ function TableRowItem({
   venueId: string
   onEdit: (t: TableRow_) => void
 }) {
+  const tRow = useT()
   const [confirmDeactivate, setConfirmDeactivate] = useState(false)
 
   return (
@@ -243,15 +243,15 @@ function TableRowItem({
         </TableCell>
         <TableCell className="text-center">
           {table.can_blend
-            ? <span className="text-[10px] text-emerald-400">Yes</span>
-            : <span className="text-[10px] text-muted-foreground">No</span>}
+            ? <span className="text-[10px] text-emerald-400">{tRow.common.yes}</span>
+            : <span className="text-[10px] text-muted-foreground">{tRow.common.no}</span>}
         </TableCell>
         <TableCell>
           <Badge className={table.is_active
             ? 'bg-emerald-500/15 text-emerald-400 text-[10px]'
             : 'bg-zinc-500/15 text-zinc-400 text-[10px]'
           }>
-            {table.is_active ? 'Active' : 'Inactive'}
+            {table.is_active ? tRow.tables.active : tRow.tables.inactive}
           </Badge>
         </TableCell>
         <TableCell className="text-right">
@@ -286,6 +286,7 @@ function TableRowItem({
 // ─── Main list ────────────────────────────────────────────────────────────────
 
 export function TablesList({ venueId }: Props) {
+  const t = useT()
   const { data, isLoading } = useTables(venueId)
   const [dialogState, setDialogState] = useState<{ open: boolean; editing: TableRow_ | null }>({
     open: false,
@@ -297,7 +298,7 @@ export function TablesList({ venueId }: Props) {
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          Drag rows to set sort order — allocation prefers lower sort_order tables first.
+          {t.tables.sort_hint}
         </p>
         <Button
           size="sm"
@@ -305,7 +306,7 @@ export function TablesList({ venueId }: Props) {
           className="h-8"
         >
           <Plus className="mr-1.5 h-3.5 w-3.5" />
-          Add table
+          {t.tables.add_table}
         </Button>
       </div>
 
@@ -314,13 +315,13 @@ export function TablesList({ venueId }: Props) {
           <TableHeader>
             <TableRow className="h-9">
               <TableHead className="w-8" />
-              <TableHead className="text-xs">Name</TableHead>
-              <TableHead className="text-xs">Type</TableHead>
-              <TableHead className="text-xs">Area</TableHead>
-              <TableHead className="text-xs">Capacity</TableHead>
-              <TableHead className="text-xs">Blend group</TableHead>
-              <TableHead className="text-xs text-center">Can blend</TableHead>
-              <TableHead className="text-xs">Status</TableHead>
+              <TableHead className="text-xs">{t.tables.name}</TableHead>
+              <TableHead className="text-xs">{t.tables.type}</TableHead>
+              <TableHead className="text-xs">{t.tables.area}</TableHead>
+              <TableHead className="text-xs">{t.tables.capacity}</TableHead>
+              <TableHead className="text-xs">{t.tables.blend_group}</TableHead>
+              <TableHead className="text-xs text-center">{t.tables.can_blend}</TableHead>
+              <TableHead className="text-xs">{t.tables.status}</TableHead>
               <TableHead />
             </TableRow>
           </TableHeader>
@@ -333,7 +334,7 @@ export function TablesList({ venueId }: Props) {
             {!isLoading && tables.length === 0 && (
               <TableRow>
                 <TableCell colSpan={9} className="py-8 text-center text-sm text-muted-foreground">
-                  No tables yet.
+                  {t.tables.no_tables}
                 </TableCell>
               </TableRow>
             )}
