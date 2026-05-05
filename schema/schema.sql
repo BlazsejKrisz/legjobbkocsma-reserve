@@ -197,6 +197,7 @@ create table public.venues (
   address text,
   timezone text not null default 'Europe/Budapest',
   is_active boolean not null default true,
+  allowed_origins text[] not null default '{}',
   created_at timestamptz not null default now()
 );
 
