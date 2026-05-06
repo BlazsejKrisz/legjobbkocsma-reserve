@@ -13,7 +13,7 @@ export async function GET(_req: Request, { params }: Params) {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('venues')
-    .select('id, name, slug, is_active, created_at')
+    .select('id, name, slug, is_active, allowed_origins, created_at')
     .eq('id', venueId)
     .single()
 

@@ -113,6 +113,22 @@ export function useCreateVenue() {
   })
 }
 
+export function useUpdateVenueOrigins(venueId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (allowed_origins: string[]) =>
+      apiFetch<{ success: boolean }>(`/api/venues/${venueId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ allowed_origins }),
+      }),
+    onSuccess: () => {
+      toast.success('Whitelist saved')
+      qc.invalidateQueries({ queryKey: qk.venues.detail(venueId) })
+    },
+    onError: (err) => toast.error('Failed to save whitelist', { description: err.message }),
+  })
+}
+
 export function useUpdateVenueSettings(venueId: string) {
   const qc = useQueryClient()
   return useMutation({

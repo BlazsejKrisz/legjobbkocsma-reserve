@@ -5,6 +5,7 @@ import { getSession } from '@/lib/auth/getSession'
 import { getVenue } from '@/lib/data/venues'
 import { Button } from '@/components/ui/button'
 import { VenueSettingsForm } from '@/components/venues/VenueSettingsForm'
+import { AllowedOriginsEditor } from '@/components/venues/AllowedOriginsEditor'
 
 
 type Params = { params: Promise<{ venueId: string }> }
@@ -35,6 +36,10 @@ export default async function VenueSettingsPage({ params }: Params) {
       </div>
 
       <VenueSettingsForm venueId={venueId} />
+
+      <div className="border-t border-border pt-6">
+        <AllowedOriginsEditor venueId={venueId} />
+      </div>
     </div>
   )
 }

@@ -9,6 +9,7 @@ export const CreateVenueSchema = z.object({
 export const UpdateVenueSchema = z.object({
   name: z.string().min(2).max(100).optional(),
   is_active: z.boolean().optional(),
+  allowed_origins: z.array(z.string().url()).optional(),
 })
 
 export const VenueSettingsSchema = z.object({
