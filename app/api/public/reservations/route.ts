@@ -226,12 +226,16 @@ export async function POST(req: Request) {
   if (customerErr) return dbErr(customerErr, 'get_or_create_customer')
   const customerId = customer as number
 
-  // Create reservation
+  // Create reservation.
+  // Source = 'web' since this endpoint is what the embed (running on the
+  // venue's own website) calls.  The /api/partner endpoint, used by
+  // third-party aggregators with their own API key, is the one that
+  // sets source = 'partner'.
   const { data: rpcRow, error: rpcError } = await supabase
     .rpc('create_reservation_auto', {
       p_requested_venue_id: venue.id,
       p_customer_id: customerId,
-      p_source: 'partner',
+      p_source: 'web',
       p_requested_table_type_id: tableTypeId,
       p_starts_at: startsAt.toISOString(),
       p_party_size: payload.party_size,
