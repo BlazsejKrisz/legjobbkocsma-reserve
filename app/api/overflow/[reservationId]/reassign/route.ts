@@ -99,10 +99,20 @@ export async function POST(req: Request, { params }: Params) {
 
     if (customer?.email) {
       try {
+        // First-time confirmation vs reconfirmation:
+        //  • Overflow row (pending_manual_review) being approved → the
+        //    guest is hearing "your reservation is confirmed" for the
+        //    first time.  Use kind='confirmation'.
+        //  • Already-confirmed row being moved (different table/time/
+        //    venue) → the guest already knew about the booking, so this
+        //    is "modified and reconfirmed".  Use kind='updated'.
+        const wasOverflow = res.status === 'pending_manual_review'
+        const kind = wasOverflow ? 'confirmation' : 'updated'
+
         const outboxId = await enqueueNotification({
           reservationId: Number(reservationId),
           channel: 'email',
-          kind: 'updated',
+          kind,
           toAddress: customer.email,
           payload: {
             customerName: customer.full_name ?? 'Guest',
@@ -120,7 +130,10 @@ export async function POST(req: Request, { params }: Params) {
             endsAt: full!.ends_at,
             partySize: full!.party_size,
             reservationId,
-            isReassignment: true,
+            // Only flag as a reassignment when the row was already
+            // confirmed before — the customer already knew about it,
+            // and this email tells them what changed.
+            isReassignment: !wasOverflow,
             customerServiceNote: parsed.data.customer_service_note,
           },
         })
