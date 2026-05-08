@@ -92,11 +92,17 @@ function ChangeTimePanel({
   const origDuration =
     new Date(reservation.ends_at).getTime() - new Date(reservation.starts_at).getTime()
 
-  const fullOptions = options.filter(
+  // Deduplicate by starts_at: keep the first option per time slot (single table preferred,
+  // as the backend returns single before combined within each offset).
+  const dedupedOptions = options.filter((o, idx, arr) =>
+    arr.findIndex((x) => x.starts_at === o.starts_at) === idx
+  )
+
+  const fullOptions = dedupedOptions.filter(
     (o) =>
       new Date(o.ends_at).getTime() - new Date(o.starts_at).getTime() >= origDuration - 60_000,
   )
-  const shortOptions = options.filter(
+  const shortOptions = dedupedOptions.filter(
     (o) =>
       new Date(o.ends_at).getTime() - new Date(o.starts_at).getTime() < origDuration - 60_000,
   )
@@ -143,7 +149,7 @@ function ChangeTimePanel({
               {showAll ? (
                 <><ChevronUp className="h-3 w-3" /> {t.reassign.show_fewer}</>
               ) : (
-                <><ChevronDown className="h-3 w-3" /> Show {fullOptions.length - 6} more</>
+                <><ChevronDown className="h-3 w-3" /> {fullOptions.length - 6} more slot{fullOptions.length - 6 !== 1 ? 's' : ''}</>
               )}
             </button>
           )}
@@ -437,7 +443,6 @@ function ReassignForm({ reservation, onClose }: { reservation: Reservation; onCl
           new_table_ids: selectedOption.table_ids.map(Number),
           new_venue_id: Number(selectedOption.venue_id),
           new_starts_at: selectedOption.starts_at,
-          new_ends_at: selectedOption.ends_at,
           customer_service_note: note || undefined,
           send_confirmation_email: sendEmail,
         },
@@ -450,7 +455,6 @@ function ReassignForm({ reservation, onClose }: { reservation: Reservation; onCl
           new_table_ids: manualTableIds.map(Number),
           new_venue_id: Number(manualVenueId),
           new_starts_at: manualTimes.starts_at,
-          new_ends_at: manualTimes.ends_at,
           customer_service_note: note || undefined,
           send_confirmation_email: sendEmail,
         },

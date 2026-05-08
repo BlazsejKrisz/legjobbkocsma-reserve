@@ -23,7 +23,10 @@ import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
 import { StatusBadge } from './StatusBadge'
 import { useReservation, useReservationEvents } from '@/lib/hooks/reservations/useReservations'
-import { useUpdateReservation, useMarkConfirmationEmailSent, useRevertCancellation } from '@/lib/hooks/reservations/useUpdateReservation'
+import { useUpdateReservation, useMarkConfirmationEmailSent, useRevertCancellation, useChangeTables } from '@/lib/hooks/reservations/useUpdateReservation'
+import { useAvailableTables } from '@/lib/hooks/venues/useTables'
+import { Checkbox } from '@/components/ui/checkbox'
+import type { AvailableTable } from '@/lib/types/venueGroup'
 import { formatTimeRange, formatDateYYYYMMDD, toLocalDateTimeInputs, fromLocalDateAndTimes } from '@/lib/datetime'
 import { OVERFLOW_REASON_LABELS, SOURCE_LABELS } from '@/lib/domain/reservation'
 import type { Reservation, ReservationEvent } from '@/lib/types/reservation'
@@ -67,6 +70,109 @@ function EventLog({ reservationId }: { reservationId: string }) {
         </li>
       ))}
     </ol>
+  )
+}
+
+// ─── Change tables dialog ─────────────────────────────────────────────────────
+
+function ChangeTablesDialog({
+  reservation,
+  open,
+  onClose,
+}: {
+  reservation: Reservation
+  open: boolean
+  onClose: () => void
+}) {
+  const t = useT()
+  const changeTables = useChangeTables()
+
+  const venueId = String(reservation.assigned_venue_id ?? reservation.requested_venue_id)
+  const { data, isLoading } = useAvailableTables(venueId, reservation.starts_at, reservation.ends_at)
+  const tables: AvailableTable[] = data?.data ?? []
+
+  const currentTableIds = (reservation.reservation_tables ?? [])
+    .filter((rt) => !rt.released_at)
+    .map((rt) => String(rt.table_id))
+
+  const [selectedIds, setSelectedIds] = useState<string[]>(currentTableIds)
+
+  const toggle = (id: string) =>
+    setSelectedIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id])
+
+  const selectedTables = tables.filter((t) => selectedIds.includes(String(t.table_id)))
+  const totalCapacity = selectedTables.reduce((sum, t) => sum + t.capacity_max, 0)
+  const capacityWarning = selectedIds.length > 0 && totalCapacity < reservation.party_size
+
+  const handleSave = () => {
+    changeTables.mutate(
+      { reservationId: reservation.id, new_table_ids: selectedIds.map(Number) },
+      { onSuccess: onClose },
+    )
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>{t.detail.change_tables_title}</DialogTitle>
+          <DialogDescription>
+            {reservation.party_size} {t.common.pax} · {reservation.assigned_venue?.name ?? reservation.requested_venue?.name}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="flex flex-col gap-2">
+          {isLoading && <p className="text-xs text-muted-foreground py-2">{t.common.loading}</p>}
+          {!isLoading && tables.length === 0 && (
+            <p className="text-xs text-muted-foreground py-2 italic">{t.detail.change_tables_no_tables}</p>
+          )}
+          {!isLoading && tables.length > 0 && (
+            <div className="flex flex-col gap-1.5 max-h-60 overflow-y-auto pr-1">
+              {tables.map((tbl) => {
+                const checked = selectedIds.includes(String(tbl.table_id))
+                const fitsAlone = tbl.capacity_min <= reservation.party_size && tbl.capacity_max >= reservation.party_size
+                return (
+                  <label
+                    key={tbl.table_id}
+                    className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm transition-colors ${
+                      !tbl.is_free
+                        ? 'opacity-40 cursor-not-allowed border-border'
+                        : checked
+                          ? 'cursor-pointer border-ring bg-accent'
+                          : 'cursor-pointer border-border hover:border-ring/50 hover:bg-accent/40'
+                    }`}
+                  >
+                    <Checkbox
+                      checked={checked}
+                      disabled={!tbl.is_free}
+                      onCheckedChange={() => tbl.is_free && toggle(String(tbl.table_id))}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <span className="font-medium">{tbl.table_name}</span>
+                      {tbl.area && <span className="ml-1.5 text-muted-foreground text-xs">· {tbl.area}</span>}
+                    </div>
+                    <span className={`shrink-0 text-xs tabular-nums ${fitsAlone ? 'text-muted-foreground' : 'text-amber-400'}`}>
+                      {tbl.capacity_min}–{tbl.capacity_max} {t.common.pax}
+                    </span>
+                    <span className={`shrink-0 h-2 w-2 rounded-full ${tbl.is_free ? 'bg-green-500' : 'bg-red-500/60'}`} />
+                  </label>
+                )
+              })}
+            </div>
+          )}
+          {capacityWarning && (
+            <p className="text-xs text-amber-400">⚠ {t.detail.change_tables_capacity_warning}</p>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>{t.common.cancel}</Button>
+          <Button onClick={handleSave} disabled={changeTables.isPending || selectedIds.length === 0}>
+            {changeTables.isPending ? t.common.saving : t.detail.change_tables_save}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -196,6 +302,7 @@ function DetailContent({ reservation }: { reservation: Reservation }) {
   const [notes, setNotes] = useState(reservation.internal_notes ?? '')
   const [editingNotes, setEditingNotes] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
+  const [changeTablesOpen, setChangeTablesOpen] = useState(false)
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false)
   const update = useUpdateReservation()
   const markEmailSent = useMarkConfirmationEmailSent()
@@ -218,6 +325,11 @@ function DetailContent({ reservation }: { reservation: Reservation }) {
         reservation={reservation}
         open={editOpen}
         onClose={() => setEditOpen(false)}
+      />
+      <ChangeTablesDialog
+        reservation={reservation}
+        open={changeTablesOpen}
+        onClose={() => setChangeTablesOpen(false)}
       />
       <Dialog open={cancelConfirmOpen} onOpenChange={setCancelConfirmOpen}>
         <DialogContent className="sm:max-w-sm">
@@ -395,6 +507,11 @@ function DetailContent({ reservation }: { reservation: Reservation }) {
         {reservation.status !== 'cancelled' && (
           <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>
             {t.common.edit}
+          </Button>
+        )}
+        {reservation.status === 'confirmed' && reservation.assigned_venue_id && (
+          <Button size="sm" variant="outline" onClick={() => setChangeTablesOpen(true)}>
+            {t.detail.change_tables}
           </Button>
         )}
         {reservation.status === 'confirmed' && !reservation.manual_confirmation_email_sent_at && (

@@ -5,11 +5,9 @@ import { subDays, format } from 'date-fns'
 import { getServerT } from '@/lib/i18n/serverT'
 
 export default async function EmbedAnalyticsPage() {
-  const session = await getSession()
+  const [session, t] = await Promise.all([getSession(), getServerT()])
   if (!session) redirect('/auth/login')
   if (!session.isSuperAdmin) redirect('/dashboard')
-
-  const [t] = await Promise.all([getServerT()])
   const supabase = createAdminClient()
   const since = format(subDays(new Date(), 29), 'yyyy-MM-dd')
 

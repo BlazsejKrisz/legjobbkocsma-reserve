@@ -4,15 +4,13 @@ import { ChevronLeft } from 'lucide-react'
 import { getSession } from '@/lib/auth/getSession'
 import { getVenue } from '@/lib/data/venues'
 import { Button } from '@/components/ui/button'
-import { VenueSettingsForm } from '@/components/venues/VenueSettingsForm'
-import { AllowedOriginsEditor } from '@/components/venues/AllowedOriginsEditor'
+import { VenueSettingsTabs } from '@/components/venues/VenueSettingsTabs'
 
 
 type Params = { params: Promise<{ venueId: string }> }
 
 export default async function VenueSettingsPage({ params }: Params) {
-  const { venueId } = await params
-  const session = await getSession()
+  const [{ venueId }, session] = await Promise.all([params, getSession()])
   if (!session) redirect('/auth/login')
   if (!session.isSuperAdmin) redirect(`/dashboard/venues/${venueId}`)
 
@@ -20,7 +18,7 @@ export default async function VenueSettingsPage({ params }: Params) {
   if (!venue) notFound()
 
   return (
-    <div className="flex flex-col gap-5 max-w-2xl">
+    <div className="flex flex-col gap-6">
       <div className="flex items-center gap-2">
         <Button variant="ghost" size="sm" className="h-7" asChild>
           <Link href={`/dashboard/venues/${venueId}`}>
@@ -35,11 +33,7 @@ export default async function VenueSettingsPage({ params }: Params) {
         <p className="text-sm text-muted-foreground">{venue.name}</p>
       </div>
 
-      <VenueSettingsForm venueId={venueId} />
-
-      <div className="border-t border-border pt-6">
-        <AllowedOriginsEditor venueId={venueId} />
-      </div>
+      <VenueSettingsTabs venueId={venueId} />
     </div>
   )
 }

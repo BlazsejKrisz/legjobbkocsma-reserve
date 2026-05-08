@@ -1,11 +1,20 @@
+import { after, NextResponse } from 'next/server'
 import { ok, err, safeJson, dbErr } from '@/lib/api/http'
 import { createAdminClient } from '@/lib/supabase/server'
 import { PartnerReservationSchema } from '@/lib/validators/reservations'
-import { sendConfirmationEmail, sendReceivedEmail } from '@/lib/email/sendConfirmation'
+import { enqueueNotification } from '@/lib/notifications/enqueue'
+import { drainOne } from '@/lib/notifications/drain'
+import type { NotificationKind } from '@/lib/notifications/types'
 import { checkApiKey, validateBookingDate, validatePartySize } from '@/lib/api/publicGuard'
 import { checkIpRateLimit, checkEmailRateLimit } from '@/lib/api/rateLimiter'
 import { addMinutes } from 'date-fns'
-import { NextResponse } from 'next/server'
+
+type CreateReservationRpcResult = {
+  reservation_id: number
+  status: 'confirmed' | 'pending_manual_review'
+  assigned_venue_id: number | null
+  overflow_reason: string | null
+}
 
 // ─── CORS helpers ─────────────────────────────────────────────────────────────
 
@@ -49,7 +58,7 @@ async function resolveOrigin(
   }
 
   if (!requestOrigin || !list.includes(requestOrigin)) {
-    return { origin: requestOrigin ?? '', allowed: false }
+    return { origin: '', allowed: false }
   }
 
   return { origin: requestOrigin, allowed: true }
@@ -148,7 +157,7 @@ export async function POST(req: Request) {
   const { data: venue, error: venueErr } = await supabase
     .from('venues')
     .select(`
-      id, name,
+      id, name, logo_url, address, phone, website, email_contact,
       venue_settings (
         booking_enabled,
         default_duration_minutes,
@@ -172,9 +181,8 @@ export async function POST(req: Request) {
   if (!settings?.booking_enabled) {
     return err('Venue is not accepting bookings', { status: 422, headers: CORS })
   }
-  if (payload.party_size > (settings.max_party_size ?? 999)) {
-    return err(`Party size exceeds venue maximum (${settings.max_party_size})`, { status: 422, headers: CORS })
-  }
+  // Oversized parties are NOT rejected — the RPC routes them to overflow
+  // (pending_manual_review with overflow_reason = 'party_size_exceeds_limit')
 
   const dateErr = validateBookingDate(
     payload.starts_at.slice(0, 10),
@@ -212,49 +220,66 @@ export async function POST(req: Request) {
   const customerId = customer as number
 
   // Create reservation
-  const { data: rpcResult, error: rpcError } = await supabase.rpc('create_reservation_auto', {
-    p_requested_venue_id: venue.id,
-    p_customer_id: customerId,
-    p_source: 'partner',
-    p_requested_table_type_id: tableTypeId,
-    p_starts_at: startsAt.toISOString(),
-    p_party_size: payload.party_size,
-    p_duration_minutes: durationMinutes,
-    p_area: payload.area ?? null,
-    p_special_requests: payload.message ?? null,
-    p_internal_notes: null,
-  })
+  const { data: rpcRow, error: rpcError } = await supabase
+    .rpc('create_reservation_auto', {
+      p_requested_venue_id: venue.id,
+      p_customer_id: customerId,
+      p_source: 'partner',
+      p_requested_table_type_id: tableTypeId,
+      p_starts_at: startsAt.toISOString(),
+      p_party_size: payload.party_size,
+      p_duration_minutes: durationMinutes,
+      p_area: payload.area ?? null,
+      p_special_requests: payload.message ?? null,
+      p_internal_notes: null,
+    })
+    .single()
 
   if (rpcError) return dbErr(rpcError, 'create_reservation_auto')
+  const rpcResult = rpcRow as CreateReservationRpcResult
 
   if (payload.customer.email) {
-    if (rpcResult?.status === 'confirmed') {
-      const sent = await sendConfirmationEmail({
-        to: payload.customer.email,
-        customerName: payload.customer.full_name,
-        venueName: venue.name,
-        startsAt: startsAt.toISOString(),
-        endsAt: endsAt.toISOString(),
-        partySize: payload.party_size,
-        reservationId: rpcResult.reservation_id,
-      })
+    const kind: NotificationKind | null =
+      rpcResult?.status === 'confirmed' ? 'confirmation'
+      : rpcResult?.status === 'pending_manual_review' ? 'received'
+      : null
 
-      if (sent) {
-        await supabase.rpc('mark_confirmation_email_sent', {
-          p_reservation_id: Number(rpcResult.reservation_id),
-          p_mode: 'auto',
+    if (kind) {
+      try {
+        const outboxId = await enqueueNotification({
+          reservationId: Number(rpcResult.reservation_id),
+          channel: 'email',
+          kind,
+          toAddress: payload.customer.email,
+          payload: {
+            customerName: payload.customer.full_name,
+            venue: {
+              name: venue.name,
+              logoUrl: venue.logo_url ?? null,
+              address: venue.address ?? null,
+              phone: venue.phone ?? null,
+              website: venue.website ?? null,
+              emailContact: venue.email_contact ?? null,
+            },
+            startsAt: startsAt.toISOString(),
+            endsAt: endsAt.toISOString(),
+            partySize: payload.party_size,
+            reservationId: rpcResult.reservation_id,
+          },
         })
+
+        after(async () => {
+          await drainOne(outboxId)
+          if (kind === 'confirmation') {
+            await supabase.rpc('mark_confirmation_email_sent', {
+              p_reservation_id: Number(rpcResult.reservation_id),
+              p_mode: 'auto',
+            })
+          }
+        })
+      } catch (e) {
+        console.error('[public reservations] enqueue failed:', e)
       }
-    } else if (rpcResult?.status === 'pending_manual_review') {
-      await sendReceivedEmail({
-        to: payload.customer.email,
-        customerName: payload.customer.full_name,
-        venueName: venue.name,
-        startsAt: startsAt.toISOString(),
-        endsAt: endsAt.toISOString(),
-        partySize: payload.party_size,
-        reservationId: rpcResult.reservation_id,
-      })
     }
   }
 

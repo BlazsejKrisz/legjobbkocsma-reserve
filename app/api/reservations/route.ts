@@ -1,9 +1,19 @@
+import { after } from 'next/server'
 import { ok, err, safeJson, dbErr } from '@/lib/api/http'
 import { requireAuth } from '@/lib/api/authz'
 import { createAdminClient, createClient } from '@/lib/supabase/server'
 import { CreateReservationSchema } from '@/lib/validators/reservations'
 import { canAccessVenue } from '@/lib/auth/getSession'
-import { sendConfirmationEmail } from '@/lib/email/sendConfirmation'
+import { enqueueNotification } from '@/lib/notifications/enqueue'
+import { drainOne } from '@/lib/notifications/drain'
+import type { NotificationKind } from '@/lib/notifications/types'
+
+type CreateReservationRpcResult = {
+  reservation_id: number
+  status: 'confirmed' | 'pending_manual_review'
+  assigned_venue_id: number | null
+  overflow_reason: string | null
+}
 
 const RESERVATION_SELECT = `
   id, requested_venue_id, assigned_venue_id, customer_id,
@@ -32,7 +42,7 @@ export async function GET(req: Request) {
   const dateTo = url.searchParams.get('date_to') ?? undefined
   const search = url.searchParams.get('search') ?? undefined
   const sortBy = url.searchParams.get('sort_by') === 'starts_at' ? 'starts_at' : 'created_at'
-  const page = Number(url.searchParams.get('page') ?? '1')
+  const page = Math.max(1, Number(url.searchParams.get('page') ?? '1'))
   const pageSize = Math.min(Number(url.searchParams.get('page_size') ?? '50'), 100)
 
   const supabase = await createClient()
@@ -52,8 +62,9 @@ export async function GET(req: Request) {
   if (dateFrom) query = query.gte(sortBy, dateFrom)
   if (dateTo) query = query.lte(sortBy, dateTo)
   if (search) {
+    const escaped = search.replace(/[%_\\]/g, '\\$&')
     query = query.or(
-      `customers.full_name.ilike.%${search}%,customers.email.ilike.%${search}%,customers.phone.ilike.%${search}%`,
+      `customers.full_name.ilike.%${escaped}%,customers.email.ilike.%${escaped}%,customers.phone.ilike.%${escaped}%`,
     )
   }
 
@@ -101,44 +112,80 @@ export async function POST(req: Request) {
     (new Date(payload.ends_at).getTime() - new Date(payload.starts_at).getTime()) / 60_000,
   )
 
-  const { data: rpcResult, error: rpcError } = await supabase.rpc('create_reservation_auto', {
-    p_requested_venue_id: payload.venue_id,
-    p_customer_id: customerId,
-    p_source: payload.source,
-    p_requested_table_type_id: payload.requested_table_type_id ?? null,
-    p_starts_at: payload.starts_at,
-    p_party_size: payload.party_size,
-    p_duration_minutes: durationMinutes,
-    p_area: payload.area ?? null,
-    p_special_requests: payload.special_requests ?? null,
-    p_internal_notes: payload.internal_notes ?? null,
-  })
+  const { data: rpcRow, error: rpcError } = await supabase
+    .rpc('create_reservation_auto', {
+      p_requested_venue_id: payload.venue_id,
+      p_customer_id: customerId,
+      p_source: payload.source,
+      p_requested_table_type_id: payload.requested_table_type_id ?? null,
+      p_starts_at: payload.starts_at,
+      p_party_size: payload.party_size,
+      p_duration_minutes: durationMinutes,
+      p_area: payload.area ?? null,
+      p_special_requests: payload.special_requests ?? null,
+      p_internal_notes: payload.internal_notes ?? null,
+      p_skip_party_size_limit: true,
+    })
+    .single()
 
   if (rpcError) return dbErr(rpcError, 'create_reservation_auto')
+  const rpcResult = rpcRow as CreateReservationRpcResult
 
-  // Send confirmation email if auto-confirmed and customer has email
-  if (rpcResult?.status === 'confirmed' && payload.customer_email) {
+  // Enqueue the appropriate notification.  Sends via after() so the API
+  // response returns immediately; the cron is a safety net for orphans.
+  if (payload.customer_email && payload.send_confirmation_email) {
     const { data: venue } = await supabase
       .from('venues')
-      .select('name')
+      .select('name, logo_url, address, phone, website, email_contact')
       .eq('id', payload.venue_id)
       .single()
 
-    const sent = await sendConfirmationEmail({
-      to: payload.customer_email,
-      customerName: payload.customer_full_name ?? 'Guest',
-      venueName: venue?.name ?? '',
-      startsAt: payload.starts_at,
-      endsAt: payload.ends_at,
-      partySize: payload.party_size,
-      reservationId: rpcResult.reservation_id,
-    })
+    const kind: NotificationKind | null =
+      rpcResult.status === 'confirmed' ? 'confirmation'
+      : rpcResult.status === 'pending_manual_review' ? 'received'
+      : null
 
-    if (sent) {
-      await supabase.rpc('mark_confirmation_email_sent', {
-        p_reservation_id: Number(rpcResult.reservation_id),
-        p_mode: 'auto',
-      })
+    if (kind) {
+      try {
+        const outboxId = await enqueueNotification({
+          reservationId: Number(rpcResult.reservation_id),
+          channel: 'email',
+          kind,
+          toAddress: payload.customer_email,
+          payload: {
+            customerName: payload.customer_full_name ?? 'Guest',
+            venue: {
+              name: venue?.name ?? '',
+              logoUrl: venue?.logo_url ?? null,
+              address: venue?.address ?? null,
+              phone: venue?.phone ?? null,
+              website: venue?.website ?? null,
+              emailContact: venue?.email_contact ?? null,
+            },
+            startsAt: payload.starts_at,
+            endsAt: payload.ends_at,
+            partySize: payload.party_size,
+            reservationId: rpcResult.reservation_id,
+          },
+        })
+
+        // Fire after the response — customer sees toast immediately, email
+        // lands in inbox 1-3s later.  drainOne is idempotent against the
+        // cron retry path.
+        after(async () => {
+          await drainOne(outboxId)
+          if (kind === 'confirmation') {
+            await supabase.rpc('mark_confirmation_email_sent', {
+              p_reservation_id: Number(rpcResult.reservation_id),
+              p_mode: 'auto',
+            })
+          }
+        })
+      } catch (e) {
+        // Enqueue failed — log but don't fail the booking.  Staff can
+        // manually trigger via "Confirm + email" if needed.
+        console.error('[reservations] enqueue failed:', e)
+      }
     }
   }
 

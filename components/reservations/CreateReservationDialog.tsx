@@ -52,6 +52,7 @@ type FormValues = {
   customer_email: string
   customer_phone: string
   requested_table_type_id: string
+  send_confirmation_email: boolean
 }
 
 function addMinutes(time: string, minutes: number): string {
@@ -94,6 +95,7 @@ export function CreateReservationDialog({
       customer_email: '',
       customer_phone: '',
       requested_table_type_id: '',
+      send_confirmation_email: true,
     },
   })
 
@@ -115,6 +117,7 @@ export function CreateReservationDialog({
         customer_email: '',
         customer_phone: '',
         requested_table_type_id: '',
+        send_confirmation_email: true,
       })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -149,6 +152,7 @@ export function CreateReservationDialog({
       requested_table_type_id: values.requested_table_type_id
         ? Number(values.requested_table_type_id)
         : undefined,
+      send_confirmation_email: values.send_confirmation_email,
     }
 
     create.mutate(payload, {
@@ -307,6 +311,21 @@ export function CreateReservationDialog({
               className="h-9 text-sm"
             />
           </div>
+
+          <label className="flex items-start gap-2.5 cursor-pointer rounded-md border border-border/60 bg-muted/20 px-3 py-2.5 hover:bg-muted/30 transition-colors has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60">
+            <input
+              type="checkbox"
+              {...register('send_confirmation_email')}
+              disabled={!watch('customer_email')}
+              className="mt-0.5 h-4 w-4 rounded border-border accent-primary"
+            />
+            <div className="flex flex-col gap-0.5">
+              <span className="text-xs font-medium">{t.create.send_email}</span>
+              <span className="text-[11px] text-muted-foreground leading-snug">
+                {t.create.send_email_desc}
+              </span>
+            </div>
+          </label>
 
           <DialogFooter className="pt-2">
             <Button type="button" variant="ghost" onClick={onClose}>{t.common.cancel}</Button>

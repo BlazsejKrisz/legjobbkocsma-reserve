@@ -7,15 +7,12 @@ import { ReservationsList } from '@/components/reservations/ReservationsList'
 type Params = { params: Promise<{ venueId: string }> }
 
 export default async function VenueReservationsPage({ params }: Params) {
-  const { venueId } = await params
-  const session = await getSession()
+  const [{ venueId }, session] = await Promise.all([params, getSession()])
   if (!session) redirect('/auth/login')
   if (!canAccessVenue(session, venueId)) redirect('/dashboard')
 
-  const venue = await getVenue(venueId)
+  const [venue, tableTypes] = await Promise.all([getVenue(venueId), listTableTypesByVenue(venueId)])
   if (!venue) notFound()
-
-  const tableTypes = await listTableTypesByVenue(venueId)
 
   return (
     <div className="flex flex-col gap-6">

@@ -1,12 +1,6 @@
-import { ok, err } from '@/lib/api/http'
+import { ok, err, dbErr } from '@/lib/api/http'
 import { createAdminClient } from '@/lib/supabase/server'
 
-/**
- * Auto-complete cron — marks confirmed reservations as completed
- * once their end time has passed.
- * Called by Vercel Cron every hour.
- * Auth: CRON_SECRET header.
- */
 export async function GET(req: Request) {
   const auth = req.headers.get('authorization')
   if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -14,19 +8,10 @@ export async function GET(req: Request) {
   }
 
   const supabase = createAdminClient()
+  const { data, error } = await supabase.rpc('batch_mark_reservations_completed')
 
-  const { data, error } = await supabase
-    .from('reservations')
-    .update({ status: 'completed' })
-    .eq('status', 'confirmed')
-    .lt('ends_at', new Date().toISOString())
-    .select('id')
+  if (error) return dbErr(error, 'batch_mark_reservations_completed')
 
-  if (error) {
-    console.error('[cron/complete-reservations] update failed', error)
-    return err('DB error', { status: 500 })
-  }
-
-  console.log(`[cron/complete-reservations] completed ${data?.length ?? 0} reservation(s)`)
-  return ok({ completed: data?.length ?? 0 })
+  console.log(`[cron/complete-reservations] completed ${data ?? 0} reservation(s)`)
+  return ok({ completed: data ?? 0 })
 }

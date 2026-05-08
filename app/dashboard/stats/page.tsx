@@ -60,11 +60,9 @@ type DailyStatRow = {
 }
 
 export default async function StatsPage({ searchParams }: { searchParams: SearchParams }) {
-  const session = await getSession()
+  const [session, sp, t] = await Promise.all([getSession(), searchParams, getServerT()])
   if (!session) redirect('/auth/login')
   if (!session.isSuperAdmin && !session.isSupport) redirect('/dashboard')
-
-  const [sp, t] = await Promise.all([searchParams, getServerT()])
   const { fromStr, toStr, days, label } = resolveRange(
     sp.range ?? null,
     sp.from ?? null,

@@ -4,11 +4,9 @@ import { UsersList } from '@/components/users/UsersList'
 import { getServerT } from '@/lib/i18n/serverT'
 
 export default async function UsersPage() {
-  const session = await getSession()
+  const [session, t] = await Promise.all([getSession(), getServerT()])
   if (!session) redirect('/auth/login')
   if (!session.isSuperAdmin) redirect('/dashboard')
-
-  const t = await getServerT()
 
   return (
     <div className="flex flex-col gap-4">

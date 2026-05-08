@@ -10,6 +10,11 @@ export const UpdateVenueSchema = z.object({
   name: z.string().min(2).max(100).optional(),
   is_active: z.boolean().optional(),
   allowed_origins: z.array(z.string().url()).optional(),
+  address: z.string().max(300).nullable().optional(),
+  phone: z.string().max(30).nullable().optional(),
+  website: z.string().url().nullable().optional(),
+  email_contact: z.string().email().nullable().optional(),
+  logo_url: z.string().url().nullable().optional(),
 })
 
 export const VenueSettingsSchema = z.object({

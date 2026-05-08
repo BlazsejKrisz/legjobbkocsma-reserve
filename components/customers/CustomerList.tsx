@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { format, parseISO } from 'date-fns'
 import { Search, ChevronLeft, ChevronRight } from 'lucide-react'
@@ -21,6 +21,9 @@ type Customer = {
 }
 
 const PAGE_SIZE = 50
+const SKELETON_ROWS = Array.from({ length: 8 }, (_, i) => i)
+const SKELETON_COLS = Array.from({ length: 6 }, (_, i) => i)
+const TH = 'px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground'
 
 export function CustomerList() {
   const t = useT()
@@ -32,27 +35,30 @@ export function CustomerList() {
 
   const debouncedSearch = useDebounce(search, 300)
 
-  const load = useCallback(async (q: string, p: number) => {
-    setLoading(true)
-    try {
-      const params = new URLSearchParams({ page: String(p), page_size: String(PAGE_SIZE) })
-      if (q) params.set('search', q)
-      const res = await fetch(`/api/customers?${params}`)
-      const json = await res.json()
-      setCustomers(json.data ?? [])
-      setTotal(json.count ?? 0)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
   useEffect(() => {
     setPage(1)
   }, [debouncedSearch])
 
   useEffect(() => {
-    load(debouncedSearch, page)
-  }, [debouncedSearch, page, load])
+    const controller = new AbortController()
+    setLoading(true)
+
+    const params = new URLSearchParams({ page: String(page), page_size: String(PAGE_SIZE) })
+    if (debouncedSearch) params.set('search', debouncedSearch)
+
+    fetch(`/api/customers?${params}`, { signal: controller.signal })
+      .then((res) => res.json())
+      .then((json) => {
+        setCustomers(json.data ?? [])
+        setTotal(json.count ?? 0)
+        setLoading(false)
+      })
+      .catch((err) => {
+        if (err.name !== 'AbortError') setLoading(false)
+      })
+
+    return () => controller.abort()
+  }, [debouncedSearch, page])
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
@@ -74,19 +80,19 @@ export function CustomerList() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/30">
-              <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{t.customers.name}</th>
-              <th className="hidden px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground sm:table-cell">{t.customers.email}</th>
-              <th className="hidden px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground md:table-cell">{t.customers.phone}</th>
-              <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{t.customers.reservations}</th>
-              <th className="hidden px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide text-muted-foreground sm:table-cell">{t.customers.guests}</th>
-              <th className="hidden px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-muted-foreground lg:table-cell">{t.customers.last_visit}</th>
+              <th className={TH}>{t.customers.name}</th>
+              <th className={`${TH} hidden sm:table-cell`}>{t.customers.email}</th>
+              <th className={`${TH} hidden md:table-cell`}>{t.customers.phone}</th>
+              <th className={`${TH} text-right`}>{t.customers.reservations}</th>
+              <th className={`${TH} hidden text-right sm:table-cell`}>{t.customers.guests}</th>
+              <th className={`${TH} hidden lg:table-cell`}>{t.customers.last_visit}</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-border/50">
             {loading ? (
-              Array.from({ length: 8 }).map((_, i) => (
-                <tr key={i} className="border-b border-border/50">
-                  {Array.from({ length: 6 }).map((_, j) => (
+              SKELETON_ROWS.map((i) => (
+                <tr key={i}>
+                  {SKELETON_COLS.map((j) => (
                     <td key={j} className="px-4 py-3">
                       <div className="h-4 w-full animate-pulse rounded bg-muted" />
                     </td>
@@ -100,11 +106,8 @@ export function CustomerList() {
                 </td>
               </tr>
             ) : (
-              customers.map((c, idx) => (
-                <tr
-                  key={c.id}
-                  className={`${idx !== customers.length - 1 ? 'border-b border-border/50' : ''} hover:bg-muted/20 transition-colors`}
-                >
+              customers.map((c) => (
+                <tr key={c.id} className="hover:bg-muted/20 transition-colors">
                   <td className="px-4 py-3">
                     <Link
                       href={`/dashboard/customers/${c.id}`}

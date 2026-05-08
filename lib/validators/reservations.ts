@@ -17,6 +17,7 @@ export const CreateReservationSchema = z.object({
   customer_email: z.string().email().optional(),
   customer_phone: z.string().max(30).optional(),
   requested_table_type_id: z.coerce.number().int().positive().optional(),
+  send_confirmation_email: z.boolean().default(true),
 })
 export type CreateReservationPayload = z.infer<typeof CreateReservationSchema>
 
@@ -24,7 +25,6 @@ export const ReassignReservationSchema = z.object({
   new_table_ids: z.array(z.coerce.number().int().positive()).min(1),
   new_venue_id: z.coerce.number().int().positive(),
   new_starts_at: z.iso.datetime({ offset: true }),
-  new_ends_at: z.iso.datetime({ offset: true }),
   customer_service_note: z.string().max(2000).optional(),
   send_confirmation_email: z.boolean().default(false),
 })
@@ -42,8 +42,8 @@ export const UpdateReservationSchema = z.object({
   customer_phone: z.string().max(30).nullable().optional(),
   customer_email: z.string().email().nullable().optional(),
   party_size: z.coerce.number().int().min(1).optional(),
-  starts_at: z.string().datetime({ offset: true }).optional(),
-  ends_at: z.string().datetime({ offset: true }).optional(),
+  starts_at: z.iso.datetime({ offset: true }).optional(),
+  ends_at: z.iso.datetime({ offset: true }).optional(),
 })
 export type UpdateReservationPayload = z.infer<typeof UpdateReservationSchema>
 

@@ -149,6 +149,11 @@ export const translations = {
       start_time: 'Start time',
       end_time: 'End time',
       save_changes: 'Save changes',
+      change_tables: 'Change tables',
+      change_tables_title: 'Change assigned tables',
+      change_tables_save: 'Save tables',
+      change_tables_no_tables: 'No available tables for this time slot.',
+      change_tables_capacity_warning: 'Selected tables may not fit the party.',
     },
     // ── Create reservation ───────────────────────────────────────────────────
     create: {
@@ -170,6 +175,8 @@ export const translations = {
       phone_placeholder: 'Phone',
       create_button: 'Create reservation',
       custom_until: 'Custom end time',
+      send_email: 'Send notification email',
+      send_email_desc: 'Confirmation if auto-assigned, or "received, awaiting review" if it goes to the manual queue.',
     },
     // ── Overflow queue ───────────────────────────────────────────────────────
     overflow: {
@@ -693,6 +700,11 @@ export const translations = {
       start_time: 'Kezdés',
       end_time: 'Befejezés',
       save_changes: 'Változások mentése',
+      change_tables: 'Asztal csere',
+      change_tables_title: 'Kiosztott asztalok cseréje',
+      change_tables_save: 'Asztalok mentése',
+      change_tables_no_tables: 'Nincs elérhető asztal erre az időpontra.',
+      change_tables_capacity_warning: 'A kiválasztott asztalok nem biztos, hogy befogadják a társaságot.',
     },
     create: {
       title: 'Új foglalás',
@@ -713,6 +725,8 @@ export const translations = {
       phone_placeholder: 'Telefon',
       create_button: 'Foglalás létrehozása',
       custom_until: 'Egyéni -ig idő',
+      send_email: 'Értesítő email küldése',
+      send_email_desc: 'Ha automatikusan visszaigazolt: visszaigazolás. Ha kézi felülvizsgálatra kerül: "megkaptuk, hamarosan jelentkezünk".',
     },
     overflow: {
       pending_items: 'Várakozó tételek',

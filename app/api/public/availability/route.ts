@@ -1,6 +1,7 @@
 import { ok, err, dbErr } from '@/lib/api/http'
 import { createAdminClient } from '@/lib/supabase/server'
 import { checkApiKey, clampWindowHours, validateBookingDate, validatePartySize } from '@/lib/api/publicGuard'
+import { fromZonedTime } from 'date-fns-tz'
 import { NextResponse } from 'next/server'
 
 const CORS = {
@@ -48,16 +49,18 @@ export async function GET(req: Request) {
   // Resolve venue
   const { data: venue, error: venueErr } = await supabase
     .from('venues')
-    .select('id, name, venue_settings(booking_enabled, default_duration_minutes, min_notice_minutes, max_advance_booking_days, max_party_size)')
+    .select('id, name, timezone, venue_settings(booking_enabled, default_duration_minutes, min_duration_minutes, max_duration_minutes, min_notice_minutes, max_advance_booking_days, max_party_size)')
     .eq('slug', venueSlug)
     .eq('is_active', true)
     .single()
 
-  if (venueErr || !venue) return err(`Venue '${venueSlug}' not found`, { status: 404, headers: CORS })
+  if (venueErr || !venue) return err('Venue not found or not accepting bookings', { status: 404, headers: CORS })
 
   const settings = (venue.venue_settings as unknown as {
     booking_enabled: boolean
     default_duration_minutes: number
+    min_duration_minutes: number
+    max_duration_minutes: number
     min_notice_minutes: number
     max_advance_booking_days: number
     max_party_size: number
@@ -75,11 +78,18 @@ export async function GET(req: Request) {
   }
 
   const durationMinutes = Number(url.searchParams.get('duration_minutes') ?? settings.default_duration_minutes ?? 120)
-  const duration = `${Math.floor(durationMinutes / 60)}:${String(durationMinutes % 60).padStart(2, '0')}:00`
+  const minDuration = settings.min_duration_minutes ?? 30
+  const maxDuration = settings.max_duration_minutes ?? 480
+  if (durationMinutes < minDuration || durationMinutes > maxDuration) {
+    return err(`Duration must be between ${minDuration} and ${maxDuration} minutes`, { status: 422, headers: CORS })
+  }
 
-  // Search window: from midnight of the requested date for window_hours hours
-  const searchStart = new Date(`${date}T00:00:00`)
-  const searchEnd = new Date(`${date}T00:00:00`)
+  const duration = `${Math.floor(durationMinutes / 60)}:${String(durationMinutes % 60).padStart(2, '0')}:00`
+  const venueTimezone = (venue as unknown as { timezone: string }).timezone ?? 'Europe/Budapest'
+
+  // Search window in venue-local time to avoid UTC midnight offset errors
+  const searchStart = fromZonedTime(`${date}T00:00:00`, venueTimezone)
+  const searchEnd = fromZonedTime(`${date}T00:00:00`, venueTimezone)
   searchEnd.setHours(searchEnd.getHours() + windowHours)
 
   const { data: slots, error: slotsErr } = await supabase.rpc('get_free_time_slots_for_venue', {
@@ -95,7 +105,7 @@ export async function GET(req: Request) {
   const verified = (await Promise.all(
     (slots ?? []).map(async (slot: { slot_start: string; slot_end: string }) => {
       // Filter out slots outside open hours or after the last-booking cutoff
-      const { data: withinHours } = await supabase.rpc('is_within_venue_open_hours', {
+      const { data: withinHours } = await supabase.rpc('safe_is_within_venue_open_hours', {
         p_venue_id: venue.id,
         p_starts_at: slot.slot_start,
         p_ends_at: slot.slot_end,

@@ -20,8 +20,7 @@ async function listAllVenues(): Promise<Venue[]> {
 }
 
 export default async function VenueTimelinePage({ params }: Params) {
-  const { venueId } = await params
-  const session = await getSession()
+  const [{ venueId }, session] = await Promise.all([params, getSession()])
   if (!session) redirect('/auth/login')
   if (!canAccessVenue(session, venueId)) redirect('/dashboard')
 

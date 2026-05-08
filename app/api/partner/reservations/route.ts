@@ -2,6 +2,7 @@ import { ok, err, safeJson } from '@/lib/api/http'
 import { createAdminClient } from '@/lib/supabase/server'
 import { PartnerReservationSchema } from '@/lib/validators/reservations'
 import { addMinutes } from 'date-fns'
+import { createHash } from 'crypto'
 
 /**
  * Public partner booking endpoint.
@@ -15,10 +16,11 @@ export async function POST(req: Request) {
 
   const supabase = createAdminClient()
 
+  const keyHash = createHash('sha256').update(apiKey).digest('hex')
   const { data: keyRow, error: keyErr } = await supabase
     .from('partner_api_keys')
     .select('id, venue_id, is_active')
-    .eq('key_hash', apiKey) // store hashed keys in prod; simplest match here
+    .eq('key_hash', keyHash)
     .single()
 
   if (keyErr || !keyRow) return err('Invalid API key', { status: 401 })
@@ -39,8 +41,9 @@ export async function POST(req: Request) {
     .eq('slug', payload.venue_slug)
     .single()
 
-  if (venueErr || !venue) return err(`Venue '${payload.venue_slug}' not found`, { status: 404 })
+  if (venueErr || !venue) return err('Venue not found or not accepting bookings', { status: 404 })
   if (!venue.is_active) return err('Venue is not accepting bookings', { status: 422 })
+  if (venue.id !== keyRow.venue_id) return err('API key not authorized for this venue', { status: 403 })
 
   // Resolve optional table_type_code → table_type_id (table_types is global, not per-venue)
   let tableTypeId: string | null = null

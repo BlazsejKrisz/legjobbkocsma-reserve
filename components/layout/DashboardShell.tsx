@@ -6,6 +6,7 @@ import { SidebarContent } from './Sidebar'
 import { MobileNav } from './MobileNav'
 import { OverflowRealtimeSync } from './OverflowRealtimeSync'
 import { LanguageSwitcher } from './LanguageSwitcher'
+import { HelpButton } from './HelpButton'
 import { getSession } from '@/lib/auth/getSession'
 import { createClient } from '@/lib/supabase/server'
 
@@ -60,6 +61,8 @@ export default async function DashboardShell({
           {/* Desktop left — intentionally empty; sidebar has the brand */}
           <div className="hidden md:block" />
           <div className="flex items-center gap-1.5">
+            <HelpButton />
+            <div className="mx-1 h-4 w-px bg-border" />
             <LanguageSwitcher />
             <div className="mx-1 h-4 w-px bg-border" />
             <ThemeToggle />

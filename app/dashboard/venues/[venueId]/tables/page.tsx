@@ -10,8 +10,7 @@ import { getServerT } from '@/lib/i18n/serverT'
 type Params = { params: Promise<{ venueId: string }> }
 
 export default async function TablesPage({ params }: Params) {
-  const { venueId } = await params
-  const session = await getSession()
+  const [{ venueId }, session] = await Promise.all([params, getSession()])
   if (!session) redirect('/auth/login')
   if (!canAccessVenue(session, venueId)) redirect('/dashboard')
 

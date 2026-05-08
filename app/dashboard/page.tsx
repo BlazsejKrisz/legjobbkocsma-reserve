@@ -7,10 +7,8 @@ import { redirect } from 'next/navigation'
 import { getServerT } from '@/lib/i18n/serverT'
 
 export default async function DashboardPage() {
-  const session = await getSession()
+  const [session, t] = await Promise.all([getSession(), getServerT()])
   if (!session) redirect('/auth/login')
-
-  const t = await getServerT()
 
   return (
     <div className="flex flex-col gap-8">

@@ -25,11 +25,9 @@ function StatusBadge({ status }: { status: string }) {
 type Params = { params: Promise<{ customerId: string }> }
 
 export default async function CustomerDetailPage({ params }: Params) {
-  const session = await getSession()
+  const [session, { customerId }] = await Promise.all([getSession(), params])
   if (!session) redirect('/auth/login')
   if (!session.isSuperAdmin && !session.isSupport) redirect('/dashboard')
-
-  const { customerId } = await params
 
   const supabase = await createClient()
 

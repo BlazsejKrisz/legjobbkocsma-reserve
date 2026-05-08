@@ -1,9 +1,12 @@
+import { after } from 'next/server'
 import { ok, err, safeJson, dbErr } from '@/lib/api/http'
 import { requireAuth, requireSupportOrAbove } from '@/lib/api/authz'
 import { createAdminClient } from '@/lib/supabase/server'
 import { canAccessVenue } from '@/lib/auth/getSession'
 import { UpdateReservationSchema } from '@/lib/validators/reservations'
-import { sendConfirmationEmail } from '@/lib/email/sendConfirmation'
+import { enqueueNotification } from '@/lib/notifications/enqueue'
+import { drainOne } from '@/lib/notifications/drain'
+import { z } from 'zod'
 import type { UserSession } from '@/lib/auth/getSession'
 
 const RESERVATION_SELECT = `
@@ -152,32 +155,97 @@ export async function POST(req: Request, { params }: Params) {
     // Fetch full reservation details to send the email
     const { data: full } = await supabase
       .from('reservations')
-      .select('starts_at, ends_at, party_size, customers(full_name, email), assigned_venue:assigned_venue_id(name), requested_venue:requested_venue_id(name)')
+      .select('starts_at, ends_at, party_size, customers(full_name, email), assigned_venue:assigned_venue_id(name, logo_url, address, phone, website, email_contact), requested_venue:requested_venue_id(name, logo_url, address, phone, website, email_contact)')
       .eq('id', reservationId)
       .single()
 
     const customer = full?.customers as unknown as { full_name: string | null; email: string | null } | null
-    const venue = (full?.assigned_venue ?? full?.requested_venue) as unknown as { name: string } | null
+    type VenueRow = { name: string; logo_url: string | null; address: string | null; phone: string | null; website: string | null; email_contact: string | null }
+    const venueRow = (full?.assigned_venue ?? full?.requested_venue) as unknown as VenueRow | null
 
     if (customer?.email && full) {
-      const sent = await sendConfirmationEmail({
-        to: customer.email,
-        customerName: customer.full_name ?? 'Guest',
-        venueName: venue?.name ?? '',
-        startsAt: full.starts_at,
-        endsAt: full.ends_at,
-        partySize: full.party_size,
-        reservationId,
-      })
+      try {
+        const outboxId = await enqueueNotification({
+          reservationId: Number(reservationId),
+          channel: 'email',
+          kind: 'confirmation',
+          toAddress: customer.email,
+          payload: {
+            customerName: customer.full_name ?? 'Guest',
+            venue: {
+              name: venueRow?.name ?? '',
+              logoUrl: venueRow?.logo_url ?? null,
+              address: venueRow?.address ?? null,
+              phone: venueRow?.phone ?? null,
+              website: venueRow?.website ?? null,
+              emailContact: venueRow?.email_contact ?? null,
+            },
+            startsAt: full.starts_at,
+            endsAt: full.ends_at,
+            partySize: full.party_size,
+            reservationId,
+          },
+        })
 
-      if (sent) {
+        // Mark sent_at synchronously so the UI hides the "Confirm + email"
+        // button immediately, even before the email actually delivers.
+        // The cron will retry the send if it fails.
         const { error } = await supabase.rpc('mark_confirmation_email_sent', {
           p_reservation_id: Number(reservationId),
           p_mode: 'manual',
         })
         if (error) return dbErr(error, 'mark_confirmation_email_sent')
+
+        after(() => drainOne(outboxId))
+      } catch (e) {
+        console.error('[reservation confirm_email] enqueue failed:', e)
+        return err('Failed to queue email', { status: 500 })
       }
     }
+    return ok({ success: true })
+  }
+
+  if (action === 'change_tables') {
+    const auth = await requireAuth()
+    if (!auth.ok) return auth.response
+
+    const { reservationId } = await params
+    const supabase = createAdminClient()
+
+    const { data: res, error: resErr } = await supabase
+      .from('reservations')
+      .select('id, requested_venue_id, assigned_venue_id, starts_at, status')
+      .eq('id', reservationId)
+      .single()
+
+    if (resErr || !res) return err('Not found', { status: 404 })
+    if (!canAccessVenue(auth.session, res.requested_venue_id)) return err('Forbidden', { status: 403 })
+    if (res.status !== 'confirmed') return err('Only confirmed reservations can change tables', { status: 409 })
+    if (!res.assigned_venue_id) return err('Reservation has no assigned venue', { status: 409 })
+
+    const body = await safeJson(req)
+    const changeTablesSchema = z.object({ new_table_ids: z.array(z.number().int().positive()).min(1) })
+    const changeParsed = changeTablesSchema.safeParse(body)
+    if (!changeParsed.success) return err('new_table_ids is required', { status: 400 })
+    const { new_table_ids } = changeParsed.data
+
+    const { data: tables } = await supabase
+      .from('tables')
+      .select('venue_id')
+      .in('id', new_table_ids)
+    if (!tables?.every((t) => String(t.venue_id) === String(res.assigned_venue_id))) {
+      return err('One or more tables do not belong to the assigned venue', { status: 422 })
+    }
+
+    const { error } = await supabase.rpc('reassign_reservation', {
+      p_reservation_id: Number(reservationId),
+      p_new_table_ids: new_table_ids,
+      p_new_venue_id: res.assigned_venue_id,
+      p_new_starts_at: res.starts_at,
+      p_customer_service_notes: null,
+      p_send_manual_confirmation: false,
+    })
+    if (error) return dbErr(error, 'reassign_reservation')
     return ok({ success: true })
   }
 

@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import { useForm, Controller } from 'react-hook-form'
+import type { Control, UseFormRegister, FieldErrors } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -61,78 +62,84 @@ export function VenueSettingsForm({ venueId, readOnly }: Props) {
   }
 
   return (
-    <form onSubmit={handleSubmit((v) => update.mutate(v))} className="space-y-6">
-      <Section title={t.venue_settings.booking_controls}>
-        <ToggleField control={control} name="booking_enabled" label={t.venue_settings.booking_enabled}
-          description={t.venue_settings.booking_enabled_desc} disabled={readOnly} />
-        <ToggleField control={control} name="auto_assignment_enabled" label={t.venue_settings.auto_assignment}
-          description={t.venue_settings.auto_assignment_desc} disabled={readOnly} />
-        <ToggleField control={control} name="overflow_queue_enabled" label={t.venue_settings.overflow_queue}
-          description={t.venue_settings.overflow_queue_desc} disabled={readOnly} />
-      </Section>
+    <form onSubmit={handleSubmit((v) => update.mutate(v))}>
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
 
-      <Separator />
+        {/* Left — toggles (behaviour switches) */}
+        <div className="space-y-6">
+          <Section title={t.venue_settings.booking_controls}>
+            <ToggleField control={control} name="booking_enabled" label={t.venue_settings.booking_enabled}
+              description={t.venue_settings.booking_enabled_desc} disabled={readOnly} />
+            <ToggleField control={control} name="auto_assignment_enabled" label={t.venue_settings.auto_assignment}
+              description={t.venue_settings.auto_assignment_desc} disabled={readOnly} />
+            <ToggleField control={control} name="overflow_queue_enabled" label={t.venue_settings.overflow_queue}
+              description={t.venue_settings.overflow_queue_desc} disabled={readOnly} />
+          </Section>
 
-      <Section title={t.venue_settings.duration}>
-        <NumberField register={register} name="default_duration_minutes" label={t.venue_settings.default_duration}
-          hint={t.venue_settings.default_duration_hint} errors={errors} disabled={readOnly} />
-        <NumberField register={register} name="min_duration_minutes" label={t.venue_settings.min_duration}
-          hint={t.venue_settings.min_duration_hint} errors={errors} disabled={readOnly} />
-        <NumberField register={register} name="max_duration_minutes" label={t.venue_settings.max_duration}
-          hint={t.venue_settings.max_duration_hint} errors={errors} disabled={readOnly} />
-        <NumberField register={register} name="last_booking_before_close_minutes" label={t.venue_settings.last_booking}
-          hint={t.venue_settings.last_booking_hint} errors={errors} disabled={readOnly} />
-      </Section>
+          <Separator />
 
-      <Separator />
+          <Section title={t.venue_settings.table_blending}>
+            <ToggleField control={control} name="allow_combining_tables" label={t.venue_settings.combining_tables}
+              description={t.venue_settings.combining_tables_desc} disabled={readOnly} />
+            <ToggleField control={control} name="allow_cross_group_table_blending" label={t.venue_settings.cross_group_blending}
+              description={t.venue_settings.cross_group_blending_desc} disabled={readOnly} />
+          </Section>
 
-      <Section title={t.venue_settings.booking_window}>
-        <NumberField register={register} name="min_notice_minutes" label={t.venue_settings.min_notice}
-          hint={t.venue_settings.min_notice_hint} errors={errors} disabled={readOnly} />
-        <NumberField register={register} name="max_advance_booking_days" label={t.venue_settings.max_advance}
-          hint={t.venue_settings.max_advance_hint} errors={errors} disabled={readOnly} />
-      </Section>
+          <Separator />
 
-      <Separator />
+          <Section title={t.venue_settings.suggestions}>
+            <ToggleField control={control} name="allow_alternative_time_suggestions" label={t.venue_settings.alt_time}
+              description={t.venue_settings.alt_time_desc} disabled={readOnly} />
+            <ToggleField control={control} name="allow_cross_venue_suggestions" label={t.venue_settings.cross_venue}
+              description={t.venue_settings.cross_venue_desc} disabled={readOnly} />
+          </Section>
+        </div>
 
-      <Section title={t.venue_settings.capacity}>
-        <NumberField register={register} name="max_party_size" label={t.venue_settings.max_party_size}
-          hint={t.venue_settings.max_party_size_hint} errors={errors} disabled={readOnly} />
-        <NumberField register={register} name="max_total_capacity" label={t.venue_settings.max_total_capacity}
-          hint={t.venue_settings.max_total_capacity_hint} errors={errors} disabled={readOnly} />
-      </Section>
+        {/* Right — numbers (tuning parameters) */}
+        <div className="space-y-6">
+          <Section title={t.venue_settings.duration}>
+            <NumberField register={register} name="default_duration_minutes" label={t.venue_settings.default_duration}
+              hint={t.venue_settings.default_duration_hint} errors={errors} disabled={readOnly} />
+            <NumberField register={register} name="min_duration_minutes" label={t.venue_settings.min_duration}
+              hint={t.venue_settings.min_duration_hint} errors={errors} disabled={readOnly} />
+            <NumberField register={register} name="max_duration_minutes" label={t.venue_settings.max_duration}
+              hint={t.venue_settings.max_duration_hint} errors={errors} disabled={readOnly} />
+            <NumberField register={register} name="last_booking_before_close_minutes" label={t.venue_settings.last_booking}
+              hint={t.venue_settings.last_booking_hint} errors={errors} disabled={readOnly} />
+          </Section>
 
-      <Separator />
+          <Separator />
 
-      <Section title={t.venue_settings.buffers}>
-        <NumberField register={register} name="booking_buffer_before_minutes" label={t.venue_settings.buffer_before}
-          hint={t.venue_settings.buffer_before_hint} errors={errors} disabled={readOnly} />
-        <NumberField register={register} name="booking_buffer_after_minutes" label={t.venue_settings.buffer_after}
-          hint={t.venue_settings.buffer_after_hint} errors={errors} disabled={readOnly} />
-      </Section>
+          <Section title={t.venue_settings.booking_window}>
+            <NumberField register={register} name="min_notice_minutes" label={t.venue_settings.min_notice}
+              hint={t.venue_settings.min_notice_hint} errors={errors} disabled={readOnly} />
+            <NumberField register={register} name="max_advance_booking_days" label={t.venue_settings.max_advance}
+              hint={t.venue_settings.max_advance_hint} errors={errors} disabled={readOnly} />
+          </Section>
 
-      <Separator />
+          <Separator />
 
-      <Section title={t.venue_settings.table_blending}>
-        <ToggleField control={control} name="allow_combining_tables" label={t.venue_settings.combining_tables}
-          description={t.venue_settings.combining_tables_desc}
-          disabled={readOnly} />
-        <ToggleField control={control} name="allow_cross_group_table_blending" label={t.venue_settings.cross_group_blending}
-          description={t.venue_settings.cross_group_blending_desc}
-          disabled={readOnly} />
-      </Section>
+          <Section title={t.venue_settings.capacity}>
+            <NumberField register={register} name="max_party_size" label={t.venue_settings.max_party_size}
+              hint={t.venue_settings.max_party_size_hint} errors={errors} disabled={readOnly} />
+            <NumberField register={register} name="max_total_capacity" label={t.venue_settings.max_total_capacity}
+              hint={t.venue_settings.max_total_capacity_hint} errors={errors} disabled={readOnly} />
+          </Section>
 
-      <Separator />
+          <Separator />
 
-      <Section title={t.venue_settings.suggestions}>
-        <ToggleField control={control} name="allow_alternative_time_suggestions" label={t.venue_settings.alt_time}
-          description={t.venue_settings.alt_time_desc} disabled={readOnly} />
-        <ToggleField control={control} name="allow_cross_venue_suggestions" label={t.venue_settings.cross_venue}
-          description={t.venue_settings.cross_venue_desc} disabled={readOnly} />
-      </Section>
+          <Section title={t.venue_settings.buffers}>
+            <NumberField register={register} name="booking_buffer_before_minutes" label={t.venue_settings.buffer_before}
+              hint={t.venue_settings.buffer_before_hint} errors={errors} disabled={readOnly} />
+            <NumberField register={register} name="booking_buffer_after_minutes" label={t.venue_settings.buffer_after}
+              hint={t.venue_settings.buffer_after_hint} errors={errors} disabled={readOnly} />
+          </Section>
+        </div>
+
+      </div>
 
       {!readOnly && (
-        <div className="flex justify-end pt-2">
+        <div className="flex justify-end pt-6 mt-2 border-t border-border">
           <Button type="submit" disabled={update.isPending || !isDirty}>
             {update.isPending ? t.common.saving : t.common.save}
           </Button>
@@ -158,8 +165,7 @@ function ToggleField({
   description,
   disabled,
 }: {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  control: any
+  control: Control<VenueSettingsPayload>
   name: keyof VenueSettingsPayload
   label: string
   description?: string
@@ -168,7 +174,7 @@ function ToggleField({
   return (
     <Controller
       control={control}
-      name={name as string}
+      name={name}
       render={({ field }) => (
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
@@ -197,13 +203,11 @@ function NumberField({
   errors,
   disabled,
 }: {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  register: any
+  register: UseFormRegister<VenueSettingsPayload>
   name: keyof VenueSettingsPayload
   label: string
   hint?: string
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  errors: Record<string, any>
+  errors: FieldErrors<VenueSettingsPayload>
   disabled?: boolean
 }) {
   return (

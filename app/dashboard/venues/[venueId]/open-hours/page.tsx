@@ -10,8 +10,7 @@ import { OpenHoursEditor } from '@/components/venues/OpenHoursEditor'
 type Params = { params: Promise<{ venueId: string }> }
 
 export default async function OpenHoursPage({ params }: Params) {
-  const { venueId } = await params
-  const session = await getSession()
+  const [{ venueId }, session] = await Promise.all([params, getSession()])
   if (!session) redirect('/auth/login')
   if (!session.isSuperAdmin) redirect(`/dashboard/venues/${venueId}`)
 

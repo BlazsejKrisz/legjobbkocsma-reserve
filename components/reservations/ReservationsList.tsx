@@ -28,6 +28,11 @@ type Props = {
 }
 
 const PAGE_SIZE = 50
+const SKELETON_ROWS = Array.from({ length: 8 }, (_, i) => i)
+
+function activeTables(rt: { released_at: string | null; tables?: { name: string } | null }[]) {
+  return rt.filter((r) => !r.released_at).map((r) => r.tables?.name ?? '?').join(', ')
+}
 
 export function ReservationsList({
   venues,
@@ -64,6 +69,11 @@ export function ReservationsList({
     setPage(1)
   }, [])
 
+  const handleFilterReset = useCallback(() => {
+    setFilters({ ...DEFAULT_FILTERS, venueId: defaultVenueId ?? '' })
+    setPage(1)
+  }, [defaultVenueId])
+
   return (
     <div className="flex flex-col gap-4">
       {/* Toolbar */}
@@ -72,7 +82,7 @@ export function ReservationsList({
           filters={filters}
           venues={venues}
           onChange={handleFilterChange}
-          onReset={() => { setFilters({ ...DEFAULT_FILTERS, venueId: defaultVenueId ?? '' }); setPage(1) }}
+          onReset={handleFilterReset}
         />
         <Button size="sm" onClick={() => setCreateOpen(true)} className="h-8">
           <Plus className="mr-1.5 h-3.5 w-3.5" />
@@ -105,7 +115,7 @@ export function ReservationsList({
           </TableHeader>
           <TableBody>
             {isLoading &&
-              Array.from({ length: 8 }).map((_, i) => (
+              SKELETON_ROWS.map((i) => (
                 <TableRow key={i} className="h-10">
                   <TableCell colSpan={7}>
                     <div className="h-4 w-full animate-pulse rounded bg-muted" />
@@ -165,11 +175,9 @@ export function ReservationsList({
                 <TableCell className="text-xs text-muted-foreground">{r.requested_venue?.name ?? '—'}</TableCell>
                 <TableCell className="text-xs text-center">{r.party_size}</TableCell>
                 <TableCell className="text-xs">
-                  {(() => {
-                    const tables = r.reservation_tables?.filter((rt) => !rt.released_at) ?? []
-                    if (tables.length === 0) return <span className="text-muted-foreground">—</span>
-                    return tables.map((rt) => rt.tables?.name ?? '?').join(', ')
-                  })()}
+                  {r.reservation_tables?.length
+                    ? activeTables(r.reservation_tables) || <span className="text-muted-foreground">—</span>
+                    : <span className="text-muted-foreground">—</span>}
                 </TableCell>
                 <TableCell className="text-xs text-muted-foreground">
                   {t.source[r.source] ?? r.source}

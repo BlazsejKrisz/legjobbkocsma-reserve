@@ -113,6 +113,66 @@ export function useCreateVenue() {
   })
 }
 
+export function useUpdateVenueBranding(venueId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (payload: {
+      logo_url?: string | null
+      address?: string | null
+      phone?: string | null
+      website?: string | null
+      email_contact?: string | null
+    }) =>
+      apiFetch<{ success: boolean }>(`/api/venues/${venueId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+      }),
+    onSuccess: () => {
+      toast.success('Branding saved')
+      qc.invalidateQueries({ queryKey: qk.venues.detail(venueId) })
+      qc.invalidateQueries({ queryKey: qk.venues.list() })
+    },
+    onError: (err) => toast.error('Failed to save branding', { description: err.message }),
+  })
+}
+
+export function useUploadVenueLogo(venueId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await fetch(`/api/venues/${venueId}/logo`, {
+        method: 'POST',
+        body: formData,
+      })
+      const json = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(json?.error ?? `Upload failed (HTTP ${res.status})`)
+      return json as { data: { logo_url: string } }
+    },
+    onSuccess: () => {
+      toast.success('Logo uploaded')
+      qc.invalidateQueries({ queryKey: qk.venues.detail(venueId) })
+      qc.invalidateQueries({ queryKey: qk.venues.list() })
+    },
+    onError: (err: Error) => toast.error('Logo upload failed', { description: err.message }),
+  })
+}
+
+export function useDeleteVenueLogo(venueId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () =>
+      apiFetch<{ success: boolean }>(`/api/venues/${venueId}/logo`, { method: 'DELETE' }),
+    onSuccess: () => {
+      toast.success('Logo removed')
+      qc.invalidateQueries({ queryKey: qk.venues.detail(venueId) })
+      qc.invalidateQueries({ queryKey: qk.venues.list() })
+    },
+    onError: (err: Error) => toast.error('Failed to remove logo', { description: err.message }),
+  })
+}
+
 export function useUpdateVenueOrigins(venueId: string) {
   const qc = useQueryClient()
   return useMutation({

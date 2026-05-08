@@ -26,6 +26,11 @@ export type Venue = {
   name: string
   slug: string
   is_active: boolean
+  address: string | null
+  phone: string | null
+  website: string | null
+  email_contact: string | null
+  logo_url: string | null
   created_at: string
 }
 

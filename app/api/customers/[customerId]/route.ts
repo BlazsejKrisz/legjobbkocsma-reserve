@@ -41,6 +41,17 @@ export async function GET(_req: Request, { params }: Params) {
   if (reservationsResult.error) return dbErr(reservationsResult.error)
 
   const reservations = reservationsResult.data ?? []
+
+  // venue_staff can only view customers who have reservations at their venue(s)
+  if (auth.session.isVenueStaff && auth.session.venueIds.length > 0) {
+    const accessible = new Set(auth.session.venueIds.map(String))
+    const hasAccess = reservations.some((r) => {
+      const req = (r.requested_venue as unknown as { id: string } | null)?.id
+      const asg = (r.assigned_venue as unknown as { id: string } | null)?.id
+      return accessible.has(String(req)) || accessible.has(String(asg))
+    })
+    if (!hasAccess) return err('Forbidden', { status: 403 })
+  }
   const totalGuests = reservations.reduce((sum, r) => sum + r.party_size, 0)
   const completedCount = reservations.filter((r) => r.status === 'completed').length
   const cancelledCount = reservations.filter((r) => r.status === 'cancelled').length

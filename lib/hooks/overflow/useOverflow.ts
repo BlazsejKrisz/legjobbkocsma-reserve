@@ -39,6 +39,8 @@ export function useReallocationOptions(reservationId: string | null) {
         `/api/overflow/${reservationId}/reassign`,
       ),
     enabled: !!reservationId,
+    refetchInterval: 15_000,
+    staleTime: 10_000,
   })
 }
 

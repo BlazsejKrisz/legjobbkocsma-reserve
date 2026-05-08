@@ -61,6 +61,25 @@ export function useRevertCancellation() {
   })
 }
 
+export function useChangeTables() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ reservationId, new_table_ids }: { reservationId: string; new_table_ids: number[] }) =>
+      apiFetch<{ success: boolean }>(
+        `/api/reservations/${reservationId}?action=change_tables`,
+        { method: 'POST', body: JSON.stringify({ new_table_ids }) },
+      ),
+    onSuccess: (_, vars) => {
+      toast.success('Tables updated')
+      qc.invalidateQueries({ queryKey: qk.reservations.detail(vars.reservationId) })
+      qc.invalidateQueries({ queryKey: qk.reservations.all() })
+    },
+    onError: (err) => {
+      toast.error('Failed to change tables', { description: err.message })
+    },
+  })
+}
+
 export function useMarkConfirmationEmailSent() {
   const qc = useQueryClient()
 
