@@ -91,7 +91,7 @@ function TableDialog({
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{editing ? t.tables.edit_table : t.tables.new_table}</DialogTitle>
         </DialogHeader>
@@ -183,7 +183,7 @@ function DeactivateRow({ venueId, tableId, onDone }: { venueId: string; tableId:
   const deactivate = useDeactivateTable(venueId)
   return (
     <Dialog open onOpenChange={(o) => !o && onDone()}>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="max-w-[95vw] sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>{t.tables.deactivate_title}</DialogTitle>
         </DialogHeader>

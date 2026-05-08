@@ -674,7 +674,7 @@ function ReassignForm({ reservation, onClose }: { reservation: Reservation; onCl
               </select>
             </div>
 
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="flex flex-col gap-1.5">
                 <Label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{t.reassign.date}</Label>
                 <Input type="date" value={manualDate} onChange={(e) => { setManualDate(e.target.value); setManualTableIds([]) }} className="text-sm h-9" />
@@ -756,7 +756,7 @@ export function ReassignmentDialog({
   const t = useT()
   return (
     <Dialog open={!!reservation} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-2xl max-h-[92vh] overflow-y-auto">
+      <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[92vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{t.reassign.title}</DialogTitle>
         </DialogHeader>

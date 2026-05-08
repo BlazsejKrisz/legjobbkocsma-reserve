@@ -236,8 +236,10 @@ export function TimelineView({ venueId, venues, tableTypes }: Props) {
                 ))}
           </div>
 
-          {/* Scrollable timeline area */}
-          <div className="overflow-x-auto flex-1">
+          {/* Scrollable timeline area.  min-w-0 lets this flex item shrink
+              below its content min-width so overflow-x-auto actually engages
+              instead of pushing the page wider. */}
+          <div className="overflow-x-auto flex-1 min-w-0">
             {/* width:100% fills the container; minWidth keeps scroll usable on narrow screens */}
             <div style={{ width: '100%', minWidth: minWidth }}>
               {/* Hour labels */}

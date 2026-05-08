@@ -23,8 +23,10 @@ import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
 import { StatusBadge } from './StatusBadge'
 import { useReservation, useReservationEvents } from '@/lib/hooks/reservations/useReservations'
-import { useUpdateReservation, useMarkConfirmationEmailSent, useRevertCancellation, useChangeTables } from '@/lib/hooks/reservations/useUpdateReservation'
+import { useUpdateReservation, useMarkConfirmationEmailSent, useRevertCancellation, useChangeTables, useMoveToOverflow } from '@/lib/hooks/reservations/useUpdateReservation'
 import { useAvailableTables } from '@/lib/hooks/venues/useTables'
+import { useCheckAvailability } from '@/lib/hooks/availability/useAvailability'
+import { Search, AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 import type { AvailableTable } from '@/lib/types/venueGroup'
 import { formatTimeRange, formatDateYYYYMMDD, toLocalDateTimeInputs, fromLocalDateAndTimes } from '@/lib/datetime'
@@ -113,7 +115,7 @@ function ChangeTablesDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="max-w-[95vw] sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>{t.detail.change_tables_title}</DialogTitle>
           <DialogDescription>
@@ -189,6 +191,8 @@ function EditReservationDialog({
 }) {
   const t = useT()
   const update = useUpdateReservation()
+  const moveToOverflow = useMoveToOverflow()
+  const checkAvail = useCheckAvailability()
   const c = reservation.customers
 
   const startIn = toLocalDateTimeInputs(reservation.starts_at)
@@ -203,6 +207,64 @@ function EditReservationDialog({
   const [endTime, setEndTime] = useState(endIn.time)
   const [specialRequests, setSpecialRequests] = useState(reservation.special_requests ?? '')
   const [internalNotes, setInternalNotes] = useState(reservation.internal_notes ?? '')
+
+  // Tracks the result of an availability check the user explicitly ran.
+  // Reset whenever any "schedule-relevant" field changes so the UI doesn't
+  // suggest a stale verdict.
+  const [availResult, setAvailResult] = useState<'has_match' | 'no_match' | null>(null)
+
+  // Tables go bad when starts_at, ends_at, or party_size change relative to
+  // what the reservation currently has assigned.  Notes / customer-info
+  // edits don't need a re-check.
+  const scheduleChanged =
+    startDate !== startIn.date ||
+    startTime !== startIn.time ||
+    endTime   !== endIn.time   ||
+    Number(partySize) !== reservation.party_size
+
+  // Reset the check verdict whenever the schedule fields move.
+  const lastSig = `${startDate}|${startTime}|${endTime}|${partySize}`
+  const [lastCheckedSig, setLastCheckedSig] = useState<string | null>(null)
+  if (availResult && lastCheckedSig !== null && lastSig !== lastCheckedSig) {
+    setAvailResult(null)
+    setLastCheckedSig(null)
+  }
+
+  const venueId =
+    reservation.assigned_venue_id ??
+    reservation.requested_venue_id ??
+    null
+
+  const handleCheckAvailability = () => {
+    if (!venueId) return
+    const times = fromLocalDateAndTimes(startDate, startTime, endTime, { allowOvernight: true })
+    const durationMinutes = Math.round(
+      (new Date(times.ends_at).getTime() - new Date(times.starts_at).getTime()) / 60_000,
+    )
+    checkAvail.mutate(
+      {
+        venue_id: Number(venueId),
+        starts_at: times.starts_at,
+        duration_minutes: durationMinutes,
+        party_size: Number(partySize),
+        table_type_id: null,
+        area: null,
+        alt_time_window_minutes: 60,
+        alt_time_step_minutes: 30,
+        // Crucial: pretend this reservation's own tables aren't booked.
+        // Otherwise moving 19:00→20:00 at the same tables would say "no
+        // fit" because they're "occupied" by the current booking at 19:00.
+        exclude_reservation_id: Number(reservation.id),
+      },
+      {
+        onSuccess: (res) => {
+          const hasMatch = (res.data ?? []).some((r) => r.match_type === 'requested')
+          setAvailResult(hasMatch ? 'has_match' : 'no_match')
+          setLastCheckedSig(lastSig)
+        },
+      },
+    )
+  }
 
   const handleSave = () => {
     const times = fromLocalDateAndTimes(startDate, startTime, endTime, { allowOvernight: true })
@@ -222,15 +284,34 @@ function EditReservationDialog({
     )
   }
 
+  const handleSaveToOverflow = () => {
+    const times = fromLocalDateAndTimes(startDate, startTime, endTime, { allowOvernight: true })
+    moveToOverflow.mutate(
+      {
+        reservationId: reservation.id,
+        customer_full_name: fullName || undefined,
+        customer_phone: phone || null,
+        customer_email: email || null,
+        party_size: partySize ? Number(partySize) : undefined,
+        starts_at: times.starts_at,
+        ends_at: times.ends_at,
+        special_requests: specialRequests || null,
+        internal_notes: internalNotes || null,
+      },
+      { onSuccess: onClose },
+    )
+  }
+
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{t.detail.edit_title}</DialogTitle>
         </DialogHeader>
-        <div className="flex flex-col gap-4 py-1">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="col-span-2 flex flex-col gap-1">
+        <div className="flex flex-col gap-3 py-1">
+          {/* Customer block — name full row, phone + email in 2 cols. */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="sm:col-span-2 flex flex-col gap-1">
               <Label className="text-xs">{t.detail.full_name}</Label>
               <Input value={fullName} onChange={(e) => setFullName(e.target.value)} className="text-sm h-8" />
             </div>
@@ -242,16 +323,12 @@ function EditReservationDialog({
               <Label className="text-xs">{t.detail.email}</Label>
               <Input value={email} onChange={(e) => setEmail(e.target.value)} type="email" className="text-sm h-8" />
             </div>
-            <div className="flex flex-col gap-1">
-              <Label className="text-xs">{t.detail.party_size}</Label>
-              <Input
-                value={partySize}
-                onChange={(e) => setPartySize(e.target.value)}
-                type="number"
-                min={1}
-                className="text-sm h-8"
-              />
-            </div>
+          </div>
+
+          {/* Schedule + party — single row of 4 on tablet+, stacks on phone.
+              Keeps the dialog short even when the availability check card
+              expands below. */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="flex flex-col gap-1">
               <Label className="text-xs">{t.detail.date}</Label>
               <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="text-sm h-8" />
@@ -264,31 +341,99 @@ function EditReservationDialog({
               <Label className="text-xs">{t.detail.end_time}</Label>
               <Input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className="text-sm h-8" />
             </div>
+            <div className="flex flex-col gap-1">
+              <Label className="text-xs">{t.detail.party_size}</Label>
+              <Input
+                value={partySize}
+                onChange={(e) => setPartySize(e.target.value)}
+                type="number"
+                min={1}
+                className="text-sm h-8"
+              />
+            </div>
           </div>
-          <div className="flex flex-col gap-1">
-            <Label className="text-xs">{t.detail.special_requests}</Label>
-            <Textarea
-              value={specialRequests}
-              onChange={(e) => setSpecialRequests(e.target.value)}
-              rows={2}
-              className="text-sm resize-none"
-            />
+          {/* Notes side-by-side at this width — special requests is what
+              the guest wrote, internal notes is what staff wrote.  Stack
+              on phone for readability. */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1">
+              <Label className="text-xs">{t.detail.special_requests}</Label>
+              <Textarea
+                value={specialRequests}
+                onChange={(e) => setSpecialRequests(e.target.value)}
+                rows={2}
+                className="text-sm resize-none"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label className="text-xs">{t.detail.internal_notes}</Label>
+              <Textarea
+                value={internalNotes}
+                onChange={(e) => setInternalNotes(e.target.value)}
+                rows={2}
+                className="text-sm resize-none"
+              />
+            </div>
           </div>
-          <div className="flex flex-col gap-1">
-            <Label className="text-xs">{t.detail.internal_notes}</Label>
-            <Textarea
-              value={internalNotes}
-              onChange={(e) => setInternalNotes(e.target.value)}
-              rows={2}
-              className="text-sm resize-none"
-            />
-          </div>
+
+          {/* ─── Availability check (only when schedule-relevant fields differ) ── */}
+          {scheduleChanged && (
+            <div className="flex flex-col gap-2 rounded-lg border border-border bg-muted/20 p-3">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs font-medium">{t.detail.availability_check_title}</p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleCheckAvailability}
+                  disabled={checkAvail.isPending || !venueId}
+                  className="h-7"
+                >
+                  {checkAvail.isPending ? (
+                    <><Loader2 className="h-3 w-3 animate-spin" /> {t.detail.availability_checking}</>
+                  ) : (
+                    <><Search className="h-3 w-3" /> {t.detail.availability_check_button}</>
+                  )}
+                </Button>
+              </div>
+              {availResult === 'has_match' && (
+                <p className="flex items-center gap-1.5 text-[11px] text-emerald-400">
+                  <CheckCircle2 className="h-3 w-3" />
+                  {t.detail.availability_has_match}
+                </p>
+              )}
+              {availResult === 'no_match' && (
+                <p className="flex items-center gap-1.5 text-[11px] text-amber-400">
+                  <AlertTriangle className="h-3 w-3" />
+                  {t.detail.availability_no_match}
+                </p>
+              )}
+              {!availResult && (
+                <p className="text-[11px] text-muted-foreground leading-snug">
+                  {t.detail.availability_check_hint}
+                </p>
+              )}
+            </div>
+          )}
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>{t.common.cancel}</Button>
-          <Button onClick={handleSave} disabled={update.isPending}>
-            {update.isPending ? t.common.saving : t.detail.save_changes}
-          </Button>
+          {scheduleChanged && availResult === 'no_match' ? (
+            <Button
+              onClick={handleSaveToOverflow}
+              disabled={moveToOverflow.isPending}
+              className="bg-amber-500 hover:bg-amber-500/90 text-amber-950"
+            >
+              {moveToOverflow.isPending ? t.common.saving : t.detail.save_to_overflow}
+            </Button>
+          ) : (
+            <Button
+              onClick={handleSave}
+              disabled={update.isPending || (scheduleChanged && availResult === null)}
+              title={scheduleChanged && availResult === null ? t.detail.availability_check_required : undefined}
+            >
+              {update.isPending ? t.common.saving : t.detail.save_changes}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -332,7 +477,7 @@ function DetailContent({ reservation }: { reservation: Reservation }) {
         onClose={() => setChangeTablesOpen(false)}
       />
       <Dialog open={cancelConfirmOpen} onOpenChange={setCancelConfirmOpen}>
-        <DialogContent className="sm:max-w-sm">
+        <DialogContent className="max-w-[95vw] sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>{t.detail.cancel_title}</DialogTitle>
             <DialogDescription>
@@ -503,69 +648,85 @@ function DetailContent({ reservation }: { reservation: Reservation }) {
       <Separator />
 
       {/* Actions */}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-col gap-3">
+        {/* Primary edit actions — what staff use most often, kept on a
+            dedicated row above the status-change buttons. */}
         {reservation.status !== 'cancelled' && (
-          <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>
-            {t.common.edit}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              onClick={() => setEditOpen(true)}
+              className="font-medium"
+            >
+              {t.common.edit}
+            </Button>
+            {reservation.status === 'confirmed' && reservation.assigned_venue_id && (
+              <Button
+                size="sm"
+                onClick={() => setChangeTablesOpen(true)}
+                className="font-medium"
+              >
+                {t.detail.change_tables}
+              </Button>
+            )}
+          </div>
         )}
-        {reservation.status === 'confirmed' && reservation.assigned_venue_id && (
-          <Button size="sm" variant="outline" onClick={() => setChangeTablesOpen(true)}>
-            {t.detail.change_tables}
-          </Button>
-        )}
-        {reservation.status === 'confirmed' && !reservation.manual_confirmation_email_sent_at && (
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={markEmailSent.isPending}
-            onClick={() => markEmailSent.mutate(reservation.id)}
-          >
-            {t.detail.mark_email_sent}
-          </Button>
-        )}
-        {(reservation.status === 'confirmed' || reservation.status === 'pending_manual_review') && (
-          <>
+
+        {/* Secondary status-change actions */}
+        <div className="flex flex-wrap gap-2">
+          {reservation.status === 'confirmed' && !reservation.manual_confirmation_email_sent_at && (
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={markEmailSent.isPending}
+              onClick={() => markEmailSent.mutate(reservation.id)}
+            >
+              {t.detail.mark_email_sent}
+            </Button>
+          )}
+          {(reservation.status === 'confirmed' || reservation.status === 'pending_manual_review') && (
+            <>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={update.isPending}
+                onClick={() => update.mutate({ id: reservation.id, status: 'completed' })}
+              >
+                {t.detail.mark_completed}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-red-400 hover:text-red-300"
+                disabled={update.isPending}
+                onClick={() => setCancelConfirmOpen(true)}
+              >
+                {t.detail.cancel_action}
+              </Button>
+            </>
+          )}
+          {reservation.status === 'confirmed' && (
             <Button
               size="sm"
               variant="outline"
               disabled={update.isPending}
-              onClick={() => update.mutate({ id: reservation.id, status: 'completed' })}
+              onClick={() => update.mutate({ id: reservation.id, status: 'no_show' })}
             >
-              {t.detail.mark_completed}
+              {t.detail.no_show}
             </Button>
+          )}
+          {reservation.status === 'cancelled' && (
             <Button
               size="sm"
               variant="outline"
-              className="text-red-400 hover:text-red-300"
-              disabled={update.isPending}
-              onClick={() => setCancelConfirmOpen(true)}
+              className="text-green-500 hover:text-green-400"
+              disabled={revert.isPending}
+              onClick={() => revert.mutate(reservation.id)}
             >
-              {t.common.cancel}
+              {revert.isPending ? t.detail.restoring : t.detail.restore}
             </Button>
-          </>
-        )}
-        {reservation.status === 'confirmed' && (
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={update.isPending}
-            onClick={() => update.mutate({ id: reservation.id, status: 'no_show' })}
-          >
-            {t.detail.no_show}
-          </Button>
-        )}
-        {reservation.status === 'cancelled' && (
-          <Button
-            size="sm"
-            variant="outline"
-            className="text-green-500 hover:text-green-400"
-            disabled={revert.isPending}
-            onClick={() => revert.mutate(reservation.id)}
-          >
-            {revert.isPending ? t.detail.restoring : t.detail.restore}
-          </Button>
-        )}
+          )}
+        </div>
       </div>
 
       <Separator />

@@ -26,6 +26,8 @@ import { fromLocalDateAndTimes, todayYYYYMMDD } from '@/lib/datetime'
 import type { Venue } from '@/lib/types/venue'
 import type { TableType } from '@/lib/types/table'
 import { useT } from '@/lib/i18n/useT'
+import { ChannelPicker } from '@/components/notifications/ChannelPicker'
+import { defaultChannel, type ChannelChoice } from '@/lib/notifications/channel'
 
 type Props = {
   open: boolean
@@ -52,7 +54,6 @@ type FormValues = {
   customer_email: string
   customer_phone: string
   requested_table_type_id: string
-  send_confirmation_email: boolean
 }
 
 function addMinutes(time: string, minutes: number): string {
@@ -78,6 +79,10 @@ export function CreateReservationDialog({
 
   // custom until is on when the timeline provided an explicit end time
   const [customUntil, setCustomUntil] = useState(() => !!prefill?.until_time)
+  // Notification channel — separate state because it depends on email/phone
+  // presence which RHF doesn't watch deeply enough for our auto-pick logic.
+  const [channel, setChannel] = useState<ChannelChoice>('email')
+  const [channelTouched, setChannelTouched] = useState(false)
 
   const defaultFrom = prefill?.from_time ?? '19:00'
   const defaultUntil = prefill?.until_time ?? addMinutes(defaultFrom, DEFAULT_OFFSET_MIN)
@@ -95,7 +100,6 @@ export function CreateReservationDialog({
       customer_email: '',
       customer_phone: '',
       requested_table_type_id: '',
-      send_confirmation_email: true,
     },
   })
 
@@ -105,6 +109,8 @@ export function CreateReservationDialog({
       const from = prefill?.from_time ?? '19:00'
       const hasExplicitUntil = !!prefill?.until_time
       setCustomUntil(hasExplicitUntil)
+      setChannel('email')
+      setChannelTouched(false)
       reset({
         venue_id: defaultVenueId ?? venues[0]?.id ?? '',
         date: prefill?.date ?? todayYYYYMMDD(),
@@ -117,7 +123,6 @@ export function CreateReservationDialog({
         customer_email: '',
         customer_phone: '',
         requested_table_type_id: '',
-        send_confirmation_email: true,
       })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -139,6 +144,12 @@ export function CreateReservationDialog({
       { allowOvernight: true },
     )
 
+    const hasEmail = !!values.customer_email
+    const hasPhone = !!values.customer_phone
+    const finalChannel = channelTouched
+      ? channel
+      : defaultChannel({ hasEmail, hasPhone })
+
     const payload: CreateReservationPayload = {
       venue_id: Number(values.venue_id),
       starts_at,
@@ -152,7 +163,7 @@ export function CreateReservationDialog({
       requested_table_type_id: values.requested_table_type_id
         ? Number(values.requested_table_type_id)
         : undefined,
-      send_confirmation_email: values.send_confirmation_email,
+      notification_channel: finalChannel,
     }
 
     create.mutate(payload, {
@@ -165,12 +176,12 @@ export function CreateReservationDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{t.create.title}</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 py-2">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-3 py-2">
           {venues.length > 1 && (
             <div className="flex flex-col gap-1.5">
               <Label className="text-xs">{t.create.venue}</Label>
@@ -190,44 +201,19 @@ export function CreateReservationDialog({
             </div>
           )}
 
-          {/* Date — full row */}
-          <div className="flex flex-col gap-1.5">
-            <Label className="text-xs">{t.create.date}</Label>
-            <Input type="date" {...register('date')} className="h-9 text-sm" />
-          </div>
-
-          {/* From + Until — same row */}
-          <div className="grid grid-cols-2 gap-2">
+          {/* Date | Party (narrow) | Source | Table type — 4 across on
+              desktop, 2 cols on small tablets, single column on phones. */}
+          <div
+            className={`grid gap-2 grid-cols-1 sm:grid-cols-2 ${
+              tableTypes.length > 0
+                ? 'md:grid-cols-[1.4fr_0.6fr_1fr_1.2fr]'
+                : 'md:grid-cols-[1.4fr_0.6fr_1fr]'
+            }`}
+          >
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs">{t.create.from}</Label>
-              <Input type="time" {...register('from_time')} className="h-9 text-sm" />
+              <Label className="text-xs">{t.create.date}</Label>
+              <Input type="date" {...register('date')} className="h-9 text-sm" />
             </div>
-            <div className="flex flex-col gap-1.5">
-              <Label className="text-xs">{t.create.until}</Label>
-              <Input
-                type="time"
-                {...register('until_time')}
-                disabled={!customUntil}
-                className="h-9 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-              />
-              <label className="flex items-center gap-2 cursor-pointer w-fit">
-                <input
-                  type="checkbox"
-                  checked={customUntil}
-                  onChange={(e) => {
-                    setCustomUntil(e.target.checked)
-                    if (!e.target.checked) {
-                      setValue('until_time', addMinutes(fromTime, DEFAULT_OFFSET_MIN))
-                    }
-                  }}
-                  className="h-3.5 w-3.5 rounded border-border accent-primary"
-                />
-                <span className="text-xs text-muted-foreground">{t.create.custom_until}</span>
-              </label>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
             <div className="flex flex-col gap-1.5">
               <Label className="text-xs">{t.create.party_size}</Label>
               <Input
@@ -255,29 +241,61 @@ export function CreateReservationDialog({
                 </SelectContent>
               </Select>
             </div>
+            {tableTypes.length > 0 && (
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs">{t.create.table_type}</Label>
+                <Select
+                  value={watch('requested_table_type_id')}
+                  onValueChange={(v: string) =>
+                    setValue('requested_table_type_id', v === '__none' ? '' : v)
+                  }
+                >
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder={t.create.table_type_placeholder} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">{t.create.table_type_placeholder}</SelectItem>
+                    {tableTypes.map((tt) => (
+                      <SelectItem key={tt.id} value={tt.id}>{tt.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
-          {tableTypes.length > 0 && (
+          {/* From + Until + Custom toggle — already 2-col, stack on phone */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <div className="flex flex-col gap-1.5">
-              <Label className="text-xs">{t.create.table_type}</Label>
-              <Select
-                value={watch('requested_table_type_id')}
-                onValueChange={(v: string) =>
-                  setValue('requested_table_type_id', v === '__none' ? '' : v)
-                }
-              >
-                <SelectTrigger className="h-9 text-sm">
-                  <SelectValue placeholder={t.create.table_type_placeholder} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none">{t.create.table_type_placeholder}</SelectItem>
-                  {tableTypes.map((tt) => (
-                    <SelectItem key={tt.id} value={tt.id}>{tt.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label className="text-xs">{t.create.from}</Label>
+              <Input type="time" {...register('from_time')} className="h-9 text-sm" />
             </div>
-          )}
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center justify-between gap-2">
+                <Label className="text-xs">{t.create.until}</Label>
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={customUntil}
+                    onChange={(e) => {
+                      setCustomUntil(e.target.checked)
+                      if (!e.target.checked) {
+                        setValue('until_time', addMinutes(fromTime, DEFAULT_OFFSET_MIN))
+                      }
+                    }}
+                    className="h-3 w-3 rounded border-border accent-primary"
+                  />
+                  <span className="text-[11px] text-muted-foreground">{t.create.custom_until}</span>
+                </label>
+              </div>
+              <Input
+                type="time"
+                {...register('until_time')}
+                disabled={!customUntil}
+                className="h-9 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+            </div>
+          </div>
 
           <div className="flex flex-col gap-1.5">
             <Label className="text-xs">{t.create.special_requests}</Label>
@@ -299,33 +317,34 @@ export function CreateReservationDialog({
               placeholder={t.create.name_placeholder}
               className="h-9 text-sm"
             />
-            <Input
-              {...register('customer_email')}
-              type="email"
-              placeholder={t.create.email_placeholder}
-              className="h-9 text-sm"
-            />
-            <Input
-              {...register('customer_phone')}
-              placeholder={t.create.phone_placeholder}
-              className="h-9 text-sm"
-            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <Input
+                {...register('customer_email')}
+                type="email"
+                placeholder={t.create.email_placeholder}
+                className="h-9 text-sm"
+              />
+              <Input
+                {...register('customer_phone')}
+                placeholder={t.create.phone_placeholder}
+                className="h-9 text-sm"
+              />
+            </div>
           </div>
 
-          <label className="flex items-start gap-2.5 cursor-pointer rounded-md border border-border/60 bg-muted/20 px-3 py-2.5 hover:bg-muted/30 transition-colors has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60">
-            <input
-              type="checkbox"
-              {...register('send_confirmation_email')}
-              disabled={!watch('customer_email')}
-              className="mt-0.5 h-4 w-4 rounded border-border accent-primary"
-            />
-            <div className="flex flex-col gap-0.5">
-              <span className="text-xs font-medium">{t.create.send_email}</span>
-              <span className="text-[11px] text-muted-foreground leading-snug">
-                {t.create.send_email_desc}
-              </span>
-            </div>
-          </label>
+          <ChannelPicker
+            value={
+              channelTouched
+                ? channel
+                : defaultChannel({
+                    hasEmail: !!watch('customer_email'),
+                    hasPhone: !!watch('customer_phone'),
+                  })
+            }
+            onChange={(v) => { setChannelTouched(true); setChannel(v) }}
+            hasEmail={!!watch('customer_email')}
+            hasPhone={!!watch('customer_phone')}
+          />
 
           <DialogFooter className="pt-2">
             <Button type="button" variant="ghost" onClick={onClose}>{t.common.cancel}</Button>

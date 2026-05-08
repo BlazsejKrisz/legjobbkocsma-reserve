@@ -8,13 +8,13 @@ import type { NotificationKind, NotificationPayload, SendResult } from './types'
 // Map an outbox kind → ReservationEmail's `type` prop.  Reminders and
 // cancellations land here in chunk 4; for now they fall back to the
 // confirmation/updated layout.
-function templateTypeFor(kind: NotificationKind): 'confirmed' | 'received' | 'updated' {
+function templateTypeFor(kind: NotificationKind): 'confirmed' | 'received' | 'updated' | 'cancelled' {
   switch (kind) {
     case 'confirmation': return 'confirmed'
     case 'received':     return 'received'
     case 'updated':      return 'updated'
-    case 'reminder':     return 'confirmed'    // chunk 4 will add a real template
-    case 'cancellation': return 'updated'      // chunk 4 will add a real template
+    case 'reminder':     return 'confirmed'   // reminder reuses the confirmation layout
+    case 'cancellation': return 'cancelled'
   }
 }
 
@@ -22,7 +22,7 @@ function subjectFor(kind: NotificationKind, venueName: string): string {
   switch (kind) {
     case 'confirmation':  return `Foglalás visszaigazolva — ${venueName}`
     case 'received':      return `Foglalási igény beérkezett — ${venueName}`
-    case 'updated':       return `Foglalás módosítva — ${venueName}`
+    case 'updated':       return `Foglalás módosítva és megerősítve — ${venueName}`
     case 'reminder':      return `Emlékeztető — ${venueName}`
     case 'cancellation':  return `Foglalás lemondva — ${venueName}`
   }
@@ -43,6 +43,8 @@ export async function sendEmail(
       type: templateTypeFor(kind),
       venue: payload.venue,
       customerName: payload.customerName,
+      customerEmail: payload.customerEmail,
+      customerPhone: payload.customerPhone,
       date: formatDateYYYYMMDD(payload.startsAt),
       time: formatTimeRange(payload.startsAt, payload.endsAt),
       partySize: payload.partySize,

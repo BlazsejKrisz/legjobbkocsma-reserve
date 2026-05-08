@@ -31,12 +31,23 @@ export function StatsFilters({ venues }: Props) {
   const [, startTransition] = useTransition()
   const [customOpen, setCustomOpen] = useState(params.get('range') === 'custom')
 
-  const currentRange = params.get('range') ?? '30d'
+  // Default 'around' = past 7 + next 23 days, matches resolveRange() in the page.
+  const currentRange = params.get('range') ?? 'around'
   const currentVenue = params.get('venue_id') ?? ''
   const customFrom = params.get('from') ?? ''
   const customTo = params.get('to') ?? ''
 
   const PRESETS = [
+    {
+      id: 'around',
+      label: t.stats_filters.around,
+      get: () => ({ from: format(subDays(new Date(), 6), 'yyyy-MM-dd'), to: format(subDays(new Date(), -23), 'yyyy-MM-dd') }),
+    },
+    {
+      id: 'upcoming',
+      label: t.stats_filters.upcoming,
+      get: () => ({ from: TODAY, to: format(subDays(new Date(), -29), 'yyyy-MM-dd') }),
+    },
     {
       id: '7d',
       label: t.stats_filters.last_7_days,
@@ -151,7 +162,7 @@ export function StatsFilters({ venues }: Props) {
               variant="ghost"
               size="sm"
               className="h-7 text-[11px] px-2 text-muted-foreground"
-              onClick={() => { push({ range: '30d', from: '', to: '' }); setCustomOpen(false) }}
+              onClick={() => { push({ range: 'around', from: '', to: '' }); setCustomOpen(false) }}
             >
               <X className="h-3 w-3 mr-1" />
               {t.stats_filters.clear}

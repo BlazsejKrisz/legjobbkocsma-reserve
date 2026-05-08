@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
-import { AlertTriangle, ArrowRight, CalendarDays, Building2, BarChart2, UserSquare2 } from 'lucide-react'
+import { AlertTriangle, ArrowRight, CalendarDays, Building2, BarChart2, UserSquare2, Search } from 'lucide-react'
 import { getSession } from '@/lib/auth/getSession'
 import { OverviewStats } from '@/components/dashboard/OverviewStats'
 import { redirect } from 'next/navigation'
@@ -47,6 +47,17 @@ export default async function DashboardPage() {
             {t.dashboard.all_reservations}
             <ArrowRight className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
           </Link>
+
+          {(session.isSuperAdmin || session.isSupport) && (
+            <Link
+              href="/dashboard/availability"
+              className="group flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-4 py-2.5 text-sm font-medium text-emerald-400 transition-colors hover:border-emerald-500/40 hover:bg-emerald-500/10"
+            >
+              <Search className="h-4 w-4" />
+              {t.availability.action}
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          )}
 
           {(session.isSuperAdmin || session.isSupport) && (
             <Link

@@ -80,6 +80,41 @@ export function useChangeTables() {
   })
 }
 
+// Demote a reservation to the overflow queue.  Used by the edit modal when
+// the new criteria (date/time/party) don't fit any available tables.
+export function useMoveToOverflow() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      reservationId,
+      ...payload
+    }: {
+      reservationId: string
+      starts_at?: string
+      ends_at?: string
+      party_size?: number
+      customer_full_name?: string
+      customer_phone?: string | null
+      customer_email?: string | null
+      special_requests?: string | null
+      internal_notes?: string | null
+    }) =>
+      apiFetch<{ success: boolean }>(
+        `/api/reservations/${reservationId}?action=to_overflow`,
+        { method: 'POST', body: JSON.stringify(payload) },
+      ),
+    onSuccess: (_, vars) => {
+      toast.success('Reservation moved to overflow queue')
+      qc.invalidateQueries({ queryKey: qk.reservations.detail(vars.reservationId) })
+      qc.invalidateQueries({ queryKey: qk.reservations.all() })
+      qc.invalidateQueries({ queryKey: qk.overflow.all() })
+    },
+    onError: (err) => {
+      toast.error('Failed to move to overflow', { description: err.message })
+    },
+  })
+}
+
 export function useMarkConfirmationEmailSent() {
   const qc = useQueryClient()
 

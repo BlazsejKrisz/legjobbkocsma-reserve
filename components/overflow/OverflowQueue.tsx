@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { AlertTriangle, RefreshCw } from 'lucide-react'
+import { AlertTriangle, RefreshCw, Sparkles } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -49,7 +50,7 @@ export function OverflowQueue({ venueId }: Props) {
   return (
     <div className="flex flex-col gap-4">
       <Dialog open={!!cancelTarget} onOpenChange={(open) => !open && setCancelTarget(null)}>
-        <DialogContent className="sm:max-w-sm">
+        <DialogContent className="max-w-[95vw] sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>{t.overflow.cancel_title}</DialogTitle>
             <DialogDescription>
@@ -138,13 +139,31 @@ export function OverflowQueue({ venueId }: Props) {
             )}
 
             {items.map((r) => (
-              <TableRow key={r.id} className="h-10">
+              <TableRow
+                key={r.id}
+                className={cn(
+                  'h-10',
+                  r.has_waitlist_match && 'bg-emerald-500/5 hover:bg-emerald-500/10',
+                )}
+              >
                 <TableCell className="text-xs tabular-nums">
                   <span className="font-medium">{formatDateYYYYMMDD(r.starts_at)}</span>
                   <br />
                   <span className="text-muted-foreground">
                     {formatTimeRange(r.starts_at, r.ends_at)}
                   </span>
+                  {r.has_waitlist_match && (
+                    <>
+                      <br />
+                      <span
+                        className="inline-flex items-center gap-1 mt-0.5 px-1.5 py-0.5 rounded bg-emerald-500/15 text-[10px] text-emerald-400 font-medium"
+                        title={t.overflow.waitlist_match_tooltip}
+                      >
+                        <Sparkles className="h-2.5 w-2.5" />
+                        {t.overflow.waitlist_match}
+                      </span>
+                    </>
+                  )}
                 </TableCell>
                 <TableCell className="text-xs">
                   <span className="font-medium">{r.customers?.full_name ?? 'Walk-in'}</span>

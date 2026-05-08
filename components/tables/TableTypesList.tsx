@@ -71,7 +71,7 @@ function TableTypeDialog({
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="max-w-[95vw] sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>{editing ? t.table_types.edit_type : t.table_types.new_type}</DialogTitle>
         </DialogHeader>

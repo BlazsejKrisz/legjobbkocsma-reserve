@@ -253,6 +253,8 @@ export async function POST(req: Request) {
           toAddress: payload.customer.email,
           payload: {
             customerName: payload.customer.full_name,
+            customerEmail: payload.customer.email ?? null,
+            customerPhone: payload.customer.phone ?? null,
             venue: {
               name: venue.name,
               logoUrl: venue.logo_url ?? null,

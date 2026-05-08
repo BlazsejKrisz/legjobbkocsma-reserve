@@ -8,7 +8,15 @@ import { StatsFilters } from '@/components/dashboard/StatsFilters'
 import { subDays, format, parseISO, differenceInDays } from 'date-fns'
 import { getServerT } from '@/lib/i18n/serverT'
 
-type RangeT = { stats: { range_7d: string; range_30d: string; range_90d: string } }
+type RangeT = {
+  stats: {
+    range_7d: string
+    range_30d: string
+    range_90d: string
+    range_upcoming: string
+    range_around: string
+  }
+}
 
 function resolveRange(
   range: string | null,
@@ -31,6 +39,14 @@ function resolveRange(
       label: t.stats.range_90d,
     }
   }
+  if (range === '30d') {
+    return {
+      fromStr: fmt(subDays(today, 29)),
+      toStr: fmt(today),
+      days: 30,
+      label: t.stats.range_30d,
+    }
+  }
   if (range === '7d') {
     return {
       fromStr: fmt(subDays(today, 6)),
@@ -39,11 +55,21 @@ function resolveRange(
       label: t.stats.range_7d,
     }
   }
+  if (range === 'upcoming') {
+    return {
+      fromStr: fmt(today),
+      toStr: fmt(subDays(today, -29)),
+      days: 30,
+      label: t.stats.range_upcoming,
+    }
+  }
+  // Default: past 7 + next 23 days.  Catches both recent history and
+  // upcoming bookings, so a fresh system isn't empty.
   return {
-    fromStr: fmt(subDays(today, 29)),
-    toStr: fmt(today),
+    fromStr: fmt(subDays(today, 6)),
+    toStr: fmt(subDays(today, -23)),
     days: 30,
-    label: t.stats.range_30d,
+    label: t.stats.range_around,
   }
 }
 
@@ -73,20 +99,36 @@ export default async function StatsPage({ searchParams }: { searchParams: Search
 
   const supabase = createAdminClient()
 
-  const [dailyResult, sourceResult, venueResult, venues] = await Promise.all([
-    supabase.rpc('get_reservation_stats', {
-      p_from: fromStr,
-      p_to: toStr,
-      ...(venueId ? { p_venue_id: venueId } : {}),
-    }),
-    supabase.rpc('get_source_stats', {
-      p_from: fromStr,
-      p_to: toStr,
-      ...(venueId ? { p_venue_id: venueId } : {}),
-    }),
-    supabase.rpc('get_venue_stats', { p_from: fromStr, p_to: toStr }),
-    listVenues(session),
-  ])
+  const [dailyResult, sourceResult, venueResult, dowResult, hodResult, leadResult, venues] =
+    await Promise.all([
+      supabase.rpc('get_reservation_stats', {
+        p_from: fromStr,
+        p_to: toStr,
+        ...(venueId ? { p_venue_id: venueId } : {}),
+      }),
+      supabase.rpc('get_source_stats', {
+        p_from: fromStr,
+        p_to: toStr,
+        ...(venueId ? { p_venue_id: venueId } : {}),
+      }),
+      supabase.rpc('get_venue_stats', { p_from: fromStr, p_to: toStr }),
+      supabase.rpc('get_dow_stats', {
+        p_from: fromStr,
+        p_to: toStr,
+        ...(venueId ? { p_venue_id: venueId } : {}),
+      }),
+      supabase.rpc('get_hod_stats', {
+        p_from: fromStr,
+        p_to: toStr,
+        ...(venueId ? { p_venue_id: venueId } : {}),
+      }),
+      supabase.rpc('get_lead_time_stats', {
+        p_from: fromStr,
+        p_to: toStr,
+        ...(venueId ? { p_venue_id: venueId } : {}),
+      }),
+      listVenues(session),
+    ])
 
   const rangeStart = parseISO(fromStr)
   const dailyMap = new Map<string, DailyStatRow>(
@@ -162,6 +204,9 @@ export default async function StatsPage({ searchParams }: { searchParams: Search
         daily={daily}
         sources={sourceResult.data ?? []}
         venues={venueResult.data ?? []}
+        dow={dowResult.data ?? []}
+        hod={hodResult.data ?? []}
+        leadTime={leadResult.data ?? []}
         completionRate={completionRate}
       />
     </div>

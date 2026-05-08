@@ -7,6 +7,7 @@ import { MobileNav } from './MobileNav'
 import { OverflowRealtimeSync } from './OverflowRealtimeSync'
 import { LanguageSwitcher } from './LanguageSwitcher'
 import { HelpButton } from './HelpButton'
+import { WhatsNewButton } from './WhatsNewButton'
 import { getSession } from '@/lib/auth/getSession'
 import { createClient } from '@/lib/supabase/server'
 
@@ -43,23 +44,44 @@ export default async function DashboardShell({
       {/* Realtime subscription — activates for roles that see the overflow queue */}
       {canSeeOverflow && <OverflowRealtimeSync />}
 
-      {/* Sidebar – desktop */}
-      <aside className="hidden w-60 shrink-0 border-r border-border/60 md:flex md:flex-col h-screen sticky top-0 overflow-y-auto">
+      {/* Sidebar – desktop only.  Below lg (1024px) we use the hamburger
+          MobileNav so tablets and phones get full content width — important
+          for the timeline grid and other wide views. */}
+      <aside className="hidden w-60 shrink-0 border-r border-border/60 lg:flex lg:flex-col h-screen sticky top-0 overflow-y-auto">
         <SidebarContent role={session.role} initialOverflowCount={overflowCount} canSeeOverflow={canSeeOverflow} staffVenueId={staffVenueId} />
       </aside>
 
-      {/* Main area */}
-      <div className="flex flex-1 flex-col min-h-screen">
+      {/* Main area.  min-w-0 + min-h-0 are needed because flex items default
+          to min-width:auto, which would otherwise let wide children (e.g.
+          the timeline grid) push the whole page wider than the viewport. */}
+      <div className="flex flex-1 flex-col min-h-screen min-w-0">
         {/* Top bar */}
         <header className="flex h-13 items-center justify-between border-b border-border/60 bg-background px-4 md:px-6" style={{ height: '52px' }}>
-          <div className="flex items-center gap-3 md:hidden">
+          <div className="flex items-center gap-3 lg:hidden">
             <MobileNav role={session.role} initialOverflowCount={overflowCount} canSeeOverflow={canSeeOverflow} staffVenueId={staffVenueId} />
             <span className="text-sm font-semibold">
               Legjobb<span className="text-primary">Kocsma</span>
             </span>
           </div>
-          {/* Desktop left — intentionally empty; sidebar has the brand */}
-          <div className="hidden md:block" />
+          {/* Desktop left — sidebar has the brand, so we use this slot for
+              the What's-new affordance.  Hidden for venue_staff since the
+              changelog only lists super_admin / support tools. */}
+          {(session.isSuperAdmin || session.isSupport) && (
+            <>
+              <div className="hidden lg:flex lg:items-center lg:gap-2">
+                <WhatsNewButton />
+              </div>
+              {/* Mobile: surface the button between brand and right-side controls */}
+              <div className="lg:hidden">
+                <WhatsNewButton />
+              </div>
+            </>
+          )}
+          {/* Empty spacer so the right-side controls stay right-aligned for
+              venue_staff who don't see the button. */}
+          {!(session.isSuperAdmin || session.isSupport) && (
+            <div className="hidden lg:block" />
+          )}
           <div className="flex items-center gap-1.5">
             <HelpButton />
             <div className="mx-1 h-4 w-px bg-border" />
@@ -72,7 +94,7 @@ export default async function DashboardShell({
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto px-5 py-6 md:px-8">
+        <main className="flex-1 overflow-y-auto px-3 py-4 sm:px-5 sm:py-6 md:px-8">
           <Suspense
             fallback={
               <div className="flex h-32 items-center justify-center">

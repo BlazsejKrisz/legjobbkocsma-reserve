@@ -22,6 +22,8 @@ export type NotificationStatus =
 // the provider adapters pick the fields they need.
 export type NotificationPayload = {
   customerName: string
+  customerEmail?: string | null
+  customerPhone?: string | null
   venue: {
     name: string
     logoUrl?: string | null

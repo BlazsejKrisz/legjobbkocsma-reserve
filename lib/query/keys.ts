@@ -43,4 +43,9 @@ export const qk = {
   dashboard: {
     overview: () => ['dashboard', 'overview'] as const,
   },
+  notifications: {
+    all: () => ['notifications'] as const,
+    list: (params: Record<string, unknown>) => ['notifications', 'list', params] as const,
+    stats: () => ['notifications', 'stats'] as const,
+  },
 }

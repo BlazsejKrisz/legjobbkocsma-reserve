@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { Plus, ChevronLeft, ChevronRight } from 'lucide-react'
+import Link from 'next/link'
+import { Plus, ChevronLeft, ChevronRight, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Table,
@@ -84,6 +85,12 @@ export function ReservationsList({
           onChange={handleFilterChange}
           onReset={handleFilterReset}
         />
+        <Button size="sm" variant="outline" asChild className="h-8">
+          <Link href="/dashboard/availability">
+            <Search className="mr-1.5 h-3.5 w-3.5" />
+            {t.availability.open_button}
+          </Link>
+        </Button>
         <Button size="sm" onClick={() => setCreateOpen(true)} className="h-8">
           <Plus className="mr-1.5 h-3.5 w-3.5" />
           {t.reservations_list.new_reservation}
@@ -106,10 +113,10 @@ export function ReservationsList({
                 {t.reservations_list.date_time}
               </TableHead>
               <TableHead className="text-xs">{t.reservations_list.customer}</TableHead>
-              <TableHead className="text-xs">{t.reservations_list.venue}</TableHead>
+              <TableHead className="text-xs hidden md:table-cell">{t.reservations_list.venue}</TableHead>
               <TableHead className="text-xs">{t.reservations_list.guests}</TableHead>
-              <TableHead className="text-xs">{t.reservations_list.tables}</TableHead>
-              <TableHead className="text-xs">{t.reservations_list.source}</TableHead>
+              <TableHead className="text-xs hidden lg:table-cell">{t.reservations_list.tables}</TableHead>
+              <TableHead className="text-xs hidden md:table-cell">{t.reservations_list.source}</TableHead>
               <TableHead className="text-xs">{t.reservations_list.status}</TableHead>
             </TableRow>
           </TableHeader>
@@ -172,14 +179,14 @@ export function ReservationsList({
                     </>
                   )}
                 </TableCell>
-                <TableCell className="text-xs text-muted-foreground">{r.requested_venue?.name ?? '—'}</TableCell>
+                <TableCell className="text-xs text-muted-foreground hidden md:table-cell">{r.requested_venue?.name ?? '—'}</TableCell>
                 <TableCell className="text-xs text-center">{r.party_size}</TableCell>
-                <TableCell className="text-xs">
+                <TableCell className="text-xs hidden lg:table-cell">
                   {r.reservation_tables?.length
                     ? activeTables(r.reservation_tables) || <span className="text-muted-foreground">—</span>
                     : <span className="text-muted-foreground">—</span>}
                 </TableCell>
-                <TableCell className="text-xs text-muted-foreground">
+                <TableCell className="text-xs text-muted-foreground hidden md:table-cell">
                   {t.source[r.source] ?? r.source}
                 </TableCell>
                 <TableCell>

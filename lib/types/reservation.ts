@@ -52,6 +52,10 @@ export type Reservation = {
   requested_venue: { id: string; name: string } | null
   assigned_venue: { id: string; name: string } | null
   reservation_tables: ReservationTable[]
+  // Computed by /api/overflow — true when a free single table or combo
+  // exists for this overflow row's exact requested slot.  Surfaces the
+  // "waitlist promotion" cue when another reservation cancels.
+  has_waitlist_match?: boolean
 }
 
 export type ReservationEvent = {

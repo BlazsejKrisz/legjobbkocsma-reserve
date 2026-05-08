@@ -6,6 +6,8 @@ import { CreateReservationSchema } from '@/lib/validators/reservations'
 import { canAccessVenue } from '@/lib/auth/getSession'
 import { enqueueNotification } from '@/lib/notifications/enqueue'
 import { drainOne } from '@/lib/notifications/drain'
+import { resolveChannel, defaultChannel } from '@/lib/notifications/channel'
+import { toE164 } from '@/lib/phone/parse'
 import type { NotificationKind } from '@/lib/notifications/types'
 
 type CreateReservationRpcResult = {
@@ -131,9 +133,34 @@ export async function POST(req: Request) {
   if (rpcError) return dbErr(rpcError, 'create_reservation_auto')
   const rpcResult = rpcRow as CreateReservationRpcResult
 
+  // Decide channel: explicit notification_channel from the new picker UI
+  // takes precedence; falls back to the legacy send_confirmation_email
+  // toggle (which means "email if address present").
+  const phoneE164 = payload.customer_phone ? toE164(payload.customer_phone) : null
+  const desiredChannel =
+    payload.notification_channel ??
+    (payload.send_confirmation_email
+      ? defaultChannel({ hasEmail: !!payload.customer_email, hasPhone: !!phoneE164 })
+      : 'none')
+  const channel = resolveChannel({
+    desired: desiredChannel,
+    hasEmail: !!payload.customer_email,
+    hasPhone: !!phoneE164,
+  })
+
+  // Persist channel choice on the reservation for reminders / cancellations
+  if (channel !== 'none') {
+    await supabase
+      .from('reservations')
+      .update({ notification_channel: channel })
+      .eq('id', rpcResult.reservation_id)
+  }
+
   // Enqueue the appropriate notification.  Sends via after() so the API
   // response returns immediately; the cron is a safety net for orphans.
-  if (payload.customer_email && payload.send_confirmation_email) {
+  if (channel !== 'none') {
+    const toAddress = channel === 'email' ? payload.customer_email! : phoneE164!
+
     const { data: venue } = await supabase
       .from('venues')
       .select('name, logo_url, address, phone, website, email_contact')
@@ -149,11 +176,13 @@ export async function POST(req: Request) {
       try {
         const outboxId = await enqueueNotification({
           reservationId: Number(rpcResult.reservation_id),
-          channel: 'email',
+          channel,
           kind,
-          toAddress: payload.customer_email,
+          toAddress,
           payload: {
             customerName: payload.customer_full_name ?? 'Guest',
+            customerEmail: payload.customer_email ?? null,
+            customerPhone: phoneE164,
             venue: {
               name: venue?.name ?? '',
               logoUrl: venue?.logo_url ?? null,

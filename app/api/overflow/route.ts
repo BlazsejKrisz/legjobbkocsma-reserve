@@ -1,6 +1,6 @@
 import { ok, dbErr } from '@/lib/api/http'
 import { requireSupportOrAbove } from '@/lib/api/authz'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 
 const RESERVATION_SELECT = `
   id, requested_venue_id, assigned_venue_id, customer_id,
@@ -41,5 +41,35 @@ export async function GET(req: Request) {
   const { data, error } = await query
   if (error) return dbErr(error)
 
-  return ok({ data: data ?? [] })
+  // Waitlist enrichment: for each overflow row, check whether the requested
+  // slot has any free single table or combo right now.  If yes, the row gets
+  // `has_waitlist_match: true` so the UI can surface a "this one fits now"
+  // indicator.  Typically ~5-20 overflow rows, so a per-row RPC call is
+  // acceptable; can be batched in a single SQL function later if it grows.
+  const admin = createAdminClient()
+  const enriched = await Promise.all(
+    (data ?? []).map(async (r) => {
+      try {
+        const duration = Math.round(
+          (new Date(r.ends_at).getTime() - new Date(r.starts_at).getTime()) / 60_000,
+        )
+        const { data: matches } = await admin.rpc('find_availability_with_alternatives', {
+          p_venue_id: r.requested_venue_id,
+          p_starts_at: r.starts_at,
+          p_duration_minutes: duration,
+          p_party_size: r.party_size,
+          p_alt_time_window_minutes: 0,
+          p_alt_time_step_minutes: 30,
+        })
+        const hasMatch = (matches ?? []).some(
+          (m: { match_type: string }) => m.match_type === 'requested',
+        )
+        return { ...r, has_waitlist_match: hasMatch }
+      } catch {
+        return { ...r, has_waitlist_match: false }
+      }
+    }),
+  )
+
+  return ok({ data: enriched })
 }

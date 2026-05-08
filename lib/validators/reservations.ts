@@ -17,7 +17,11 @@ export const CreateReservationSchema = z.object({
   customer_email: z.string().email().optional(),
   customer_phone: z.string().max(30).optional(),
   requested_table_type_id: z.coerce.number().int().positive().optional(),
-  send_confirmation_email: z.boolean().default(true),
+  // Legacy: kept for backward compatibility.  New callers should send
+  // `notification_channel` instead.  Treated as 'email' when channel absent.
+  send_confirmation_email: z.boolean().optional(),
+  // Preferred: explicit channel choice.  'none' = staff opted out.
+  notification_channel: z.enum(['email', 'sms', 'none']).optional(),
 })
 export type CreateReservationPayload = z.infer<typeof CreateReservationSchema>
 

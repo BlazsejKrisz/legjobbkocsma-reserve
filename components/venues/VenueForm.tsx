@@ -45,7 +45,7 @@ export function CreateVenueDialog({ open, onClose }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="max-w-[95vw] sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>{t.venues.create_title}</DialogTitle>
         </DialogHeader>

@@ -10,7 +10,6 @@ import {
   AlertTriangle,
   Building2,
   Users,
-  X,
   CalendarRange,
   Table2,
   Tags,
@@ -22,6 +21,8 @@ import {
   BarChart2,
   UserSquare2,
   MonitorDot,
+  Send,
+  Search,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { AppRole } from '@/lib/types/user'
@@ -48,6 +49,12 @@ const NAV_ITEMS: NavItem[] = [
     href: '/dashboard/reservations',
     icon: CalendarDays,
     roles: ['super_admin', 'support', 'venue_staff'],
+  },
+  {
+    label: 'Availability',
+    href: '/dashboard/availability',
+    icon: Search,
+    roles: ['super_admin', 'support'],
   },
   {
     label: 'Overflow Queue',
@@ -90,6 +97,12 @@ const NAV_ITEMS: NavItem[] = [
     href: '/dashboard/embed',
     icon: MonitorDot,
     roles: ['super_admin'],
+  },
+  {
+    label: 'Notifications',
+    href: '/dashboard/notifications',
+    icon: Send,
+    roles: ['super_admin', 'support'],
   },
 ]
 
@@ -270,6 +283,8 @@ export function SidebarContent({ role, initialOverflowCount, canSeeOverflow = fa
     '/dashboard/customers': t.nav.customers,
     '/dashboard/stats': t.nav.statistics,
     '/dashboard/embed': t.nav.embed_analytics,
+    '/dashboard/notifications': t.nav.notifications,
+    '/dashboard/availability': t.availability.action,
   }
 
   const VENUE_LABELS: Record<string, string> = {
@@ -302,14 +317,9 @@ export function SidebarContent({ role, initialOverflowCount, canSeeOverflow = fa
             Legjobb<span className="text-primary">Kocsma</span>
           </span>
         </Link>
-        {onClose && (
-          <button
-            onClick={onClose}
-            className="rounded-md p-1.5 text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        )}
+        {/* No close button here — when used inside the mobile Sheet, Radix
+            renders its own X.  onClose is still passed down so nav links
+            can close the sheet on click. */}
       </div>
 
       {/* Divider */}

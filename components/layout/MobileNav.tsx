@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Menu } from 'lucide-react'
-import { Sheet, SheetContent } from '@/components/ui/sheet'
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import { SidebarContent } from './Sidebar'
 import type { AppRole } from '@/lib/types/user'
 
@@ -28,6 +28,9 @@ export function MobileNav({ role, initialOverflowCount, canSeeOverflow, staffVen
 
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="left" className="w-64 p-0">
+          {/* Required by Radix for screen readers; visually hidden because
+              the sidebar's brand area already serves as a visual heading. */}
+          <SheetTitle className="sr-only">Menu</SheetTitle>
           <SidebarContent
             role={role}
             initialOverflowCount={initialOverflowCount}
