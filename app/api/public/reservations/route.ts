@@ -284,9 +284,11 @@ export async function POST(req: Request) {
         after(async () => {
           await drainOne(outboxId)
           if (kind === 'confirmation') {
+            // Public bookings always go via email (the form requires it).
             await supabase.rpc('mark_confirmation_email_sent', {
               p_reservation_id: Number(rpcResult.reservation_id),
               p_mode: 'auto',
+              p_channel: 'email',
             })
           }
         })

@@ -64,7 +64,7 @@ function EventLog({ reservationId }: { reservationId: string }) {
         <li key={ev.id} className="flex items-start gap-2">
           <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground/50" />
           <div className="flex-1 min-w-0">
-            <span className="text-xs font-medium">{ev.event_type.replace(/_/g, ' ')}</span>
+            <span className="text-xs font-medium">{formatEventLabel(ev, t)}</span>
             <span className="ml-2 text-[10px] text-muted-foreground tabular-nums">
               {new Date(ev.created_at).toLocaleString()}
             </span>
@@ -73,6 +73,22 @@ function EventLog({ reservationId }: { reservationId: string }) {
       ))}
     </ol>
   )
+}
+
+// Maps the event's raw type + new_value payload to a human-friendly label
+// in the active locale.  Confirmation events specifically read
+// new_value.channel so SMS sends don't get labelled as email.
+function formatEventLabel(ev: ReservationEvent, t: ReturnType<typeof useT>): string {
+  const type = ev.event_type
+  const labels = t.detail.events as Record<string, string>
+
+  if (type === 'confirmation_email_sent') {
+    const channel = (ev.new_value as { channel?: string } | null)?.channel
+    if (channel === 'sms') return labels.confirmation_sms_sent
+    return labels.confirmation_email_sent
+  }
+
+  return labels[type] ?? type.replace(/_/g, ' ')
 }
 
 // ─── Change tables dialog ─────────────────────────────────────────────────────

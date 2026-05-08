@@ -21,6 +21,12 @@ export default async function ReservationsPage() {
   const session = await getSession()
   if (!session) redirect('/auth/login')
 
+  // venue_staff: bounce to their venue's reservations page.  The global
+  // list is hidden from their nav anyway, but block the direct URL too.
+  if (session.isVenueStaff && session.venueIds[0]) {
+    redirect(`/dashboard/venues/${session.venueIds[0]}/reservations`)
+  }
+
   const [venues, tableTypes, t] = await Promise.all([
     listVenues(session),
     listAllTableTypes(),

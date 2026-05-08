@@ -220,6 +220,7 @@ export async function POST(req: Request, { params }: Params) {
         const { error } = await supabase.rpc('mark_confirmation_email_sent', {
           p_reservation_id: Number(reservationId),
           p_mode: 'manual',
+          p_channel: 'email',
         })
         if (error) return dbErr(error, 'mark_confirmation_email_sent')
 

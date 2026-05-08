@@ -134,6 +134,7 @@ export async function POST(req: Request) {
         await supabase.rpc('mark_confirmation_email_sent', {
           p_reservation_id: Number(result.reservation_id),
           p_mode: 'manual',
+          p_channel: channel,
         })
       })
     } catch (e) {

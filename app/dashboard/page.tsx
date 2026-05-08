@@ -10,6 +10,12 @@ export default async function DashboardPage() {
   const [session, t] = await Promise.all([getSession(), getServerT()])
   if (!session) redirect('/auth/login')
 
+  // venue_staff doesn't get a global dashboard — they're scoped to a single
+  // venue.  Send them straight to their venue's timeline.
+  if (session.isVenueStaff && session.venueIds[0]) {
+    redirect(`/dashboard/venues/${session.venueIds[0]}`)
+  }
+
   return (
     <div className="flex flex-col gap-8">
       {/* Page header */}

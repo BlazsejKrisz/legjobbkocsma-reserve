@@ -37,18 +37,22 @@ type NavItem = {
   roles: AppRole[]
 }
 
+// venue_staff only sees their venue (Timeline link + venue sub-nav).  Top
+// nav entries below — Dashboard, global Reservations — are hidden for them
+// since both are scoped beyond their single venue and just clutter the
+// sidebar.  Their landing page is /dashboard/venues/{their venue id}.
 const NAV_ITEMS: NavItem[] = [
   {
     label: 'Dashboard',
     href: '/dashboard',
     icon: LayoutDashboard,
-    roles: ['super_admin', 'support', 'venue_staff'],
+    roles: ['super_admin', 'support'],
   },
   {
     label: 'Reservations',
     href: '/dashboard/reservations',
     icon: CalendarDays,
-    roles: ['super_admin', 'support', 'venue_staff'],
+    roles: ['super_admin', 'support'],
   },
   {
     label: 'Availability',

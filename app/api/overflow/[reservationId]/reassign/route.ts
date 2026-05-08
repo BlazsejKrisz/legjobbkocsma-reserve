@@ -141,6 +141,10 @@ export async function POST(req: Request, { params }: Params) {
         await supabase.rpc('mark_confirmation_email_sent', {
           p_reservation_id: Number(reservationId),
           p_mode: 'manual',
+          // The reassign dialog only triggers email today (the
+          // send_confirmation_email checkbox).  When SMS is plumbed
+          // through this dialog, change to the actual channel.
+          p_channel: 'email',
         })
 
         after(() => drainOne(outboxId))
