@@ -36,8 +36,14 @@ function emailLimiter(): Ratelimit | null {
   return _emailLimiter
 }
 
+// Set RATE_LIMIT_BYPASS=1 in .env.local (and never in prod) to skip both
+// limiters during development.  Production deploys leave this unset so the
+// real limits apply.
+const BYPASS = process.env.RATE_LIMIT_BYPASS === '1'
+
 /** Returns false if the IP has exceeded 5 requests / 10 minutes. */
 export async function checkIpRateLimit(ip: string): Promise<boolean> {
+  if (BYPASS) return true
   const l = ipLimiter()
   if (!l) return true
   const { success } = await l.limit(ip)
@@ -46,6 +52,7 @@ export async function checkIpRateLimit(ip: string): Promise<boolean> {
 
 /** Returns false if the email has been used for 3+ bookings in the last 24 hours. */
 export async function checkEmailRateLimit(email: string): Promise<boolean> {
+  if (BYPASS) return true
   const l = emailLimiter()
   if (!l) return true
   const { success } = await l.limit(email.toLowerCase())

@@ -89,11 +89,18 @@ export async function OPTIONS(req: Request) {
 // ─── POST ─────────────────────────────────────────────────────────────────────
 
 export async function POST(req: Request) {
+  // Permissive CORS for early errors (before we know the venue + can do
+  // the per-venue origin check).  The actual origin gate happens at step 5;
+  // these headers exist so JS can read pre-step-5 error bodies instead of
+  // seeing an opaque CORS-blocked failure.
+  const earlyOrigin = req.headers.get('origin') ?? '*'
+  const earlyCors = corsHeaders(earlyOrigin)
+
   // 1. API key gate (optional env-var based)
   const keyErr = checkApiKey(req)
   if (keyErr) {
     const body = await keyErr.json() as { error: string }
-    return err(body.error, { status: keyErr.status })
+    return err(body.error, { status: keyErr.status, headers: earlyCors })
   }
 
   // 2. Read raw body — needed for honeypot check before Zod strips unknown fields
@@ -124,10 +131,10 @@ export async function POST(req: Request) {
   const resolved = await resolveOrigin(payload.venue_slug, requestOrigin)
 
   if (!resolved) {
-    return err(`Venue '${payload.venue_slug}' not found`, { status: 404 })
+    return err(`Venue '${payload.venue_slug}' not found`, { status: 404, headers: earlyCors })
   }
   if (!resolved.allowed) {
-    return err('origin_not_allowed', { status: 403 })
+    return err('origin_not_allowed', { status: 403, headers: earlyCors })
   }
 
   const CORS = corsHeaders(resolved.origin)
