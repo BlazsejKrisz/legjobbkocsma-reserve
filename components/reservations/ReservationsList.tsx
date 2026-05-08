@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import Link from 'next/link'
-import { Plus, ChevronLeft, ChevronRight, Search } from 'lucide-react'
+import { Plus, ChevronLeft, ChevronRight, Search, MessageSquare } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Table,
@@ -171,7 +171,17 @@ export function ReservationsList({
                   )}
                 </TableCell>
                 <TableCell className="text-xs">
-                  <span className="font-medium">{r.customers?.full_name ?? 'Walk-in'}</span>
+                  <span className="font-medium inline-flex items-center gap-1.5">
+                    {r.customers?.full_name ?? 'Walk-in'}
+                    {r.special_requests && (
+                      <span
+                        title={`${t.reservations_list.has_message}: ${r.special_requests}`}
+                        className="inline-flex shrink-0"
+                      >
+                        <MessageSquare className="h-3 w-3 text-blue-400" strokeWidth={2.5} />
+                      </span>
+                    )}
+                  </span>
                   {r.customers?.email && (
                     <>
                       <br />

@@ -350,11 +350,18 @@ export function TimelineView({ venueId, venues, tableTypes }: Props) {
                                 r.customers?.full_name ?? 'Walk-in',
                                 `${r.party_size} guests`,
                                 t.status[r.status],
-                              ].join(' · ')}
+                                r.special_requests ? `📨 ${r.special_requests}` : null,
+                              ].filter(Boolean).join(' · ')}
                             >
                               {placement.widthPct > 3 && (
-                                <span className="text-[10px] font-medium truncate leading-tight">
-                                  {r.customers?.full_name ?? 'Walk-in'}
+                                <span className="text-[10px] font-medium truncate leading-tight flex items-center gap-1">
+                                  <span className="truncate">{r.customers?.full_name ?? 'Walk-in'}</span>
+                                  {r.special_requests && (
+                                    <span
+                                      className="inline-block h-1.5 w-1.5 rounded-full bg-blue-400 shrink-0"
+                                      aria-label={t.reservations_list.has_message}
+                                    />
+                                  )}
                                 </span>
                               )}
                               {placement.widthPct > 6 && (

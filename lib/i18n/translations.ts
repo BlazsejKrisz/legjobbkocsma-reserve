@@ -182,6 +182,7 @@ export const translations = {
       received: 'Received',
       by_received: 'By received',
       by_reservation: 'By reservation',
+      has_message: 'Guest left a message',
     },
     // ── Reservation filters ──────────────────────────────────────────────────
     filters: {
@@ -855,6 +856,7 @@ export const translations = {
       received: 'Beérkezett',
       by_received: 'Beérkezés szerint',
       by_reservation: 'Foglalás szerint',
+      has_message: 'A vendég üzenetet hagyott',
     },
     filters: {
       search_placeholder: 'Vendég keresése…',
