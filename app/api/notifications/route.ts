@@ -1,6 +1,7 @@
 import { ok, err, dbErr } from '@/lib/api/http'
 import { requireSupportOrAbove } from '@/lib/api/authz'
 import { createAdminClient } from '@/lib/supabase/server'
+import { sanitizePostgrestSearch } from '@/lib/api/postgrestSearch'
 
 const VALID_STATUSES = new Set(['pending', 'sending', 'sent', 'failed', 'dead'])
 const VALID_CHANNELS = new Set(['email', 'sms'])
@@ -41,18 +42,22 @@ export async function GET(req: Request) {
   if (status && VALID_STATUSES.has(status)) query = query.eq('status', status)
   if (channel && VALID_CHANNELS.has(channel)) query = query.eq('channel', channel)
   if (kind && VALID_KINDS.has(kind)) query = query.eq('kind', kind)
-  if (search) {
-    const escaped = search.replace(/[%_\\]/g, '\\$&')
-    query = query.ilike('to_address', `%${escaped}%`)
+  const safeSearch = sanitizePostgrestSearch(search)
+  if (safeSearch) {
+    query = query.ilike('to_address', `%${safeSearch}%`)
   }
   if (venueId) {
-    // Venue filter pushes through the joined reservation.  Use IN with the
-    // assigned/requested venue ids — Postgrest doesn't easily express OR
-    // across a joined table without a view, so we go via a sub-select.
+    // Coerce to integer to keep the sub-select free of injected `.or()`
+    // atoms via this URL param (`venue_id=1)) or true) --`).  Bigints are
+    // the only legal venue id type; anything else is a malformed request.
+    const venueIdNum = Number(venueId)
+    if (!Number.isInteger(venueIdNum) || venueIdNum <= 0) {
+      return err('Invalid venue_id', { status: 400 })
+    }
     const { data: venueReservationIds } = await supabase
       .from('reservations')
       .select('id')
-      .or(`requested_venue_id.eq.${venueId},assigned_venue_id.eq.${venueId}`)
+      .or(`requested_venue_id.eq.${venueIdNum},assigned_venue_id.eq.${venueIdNum}`)
     const ids = (venueReservationIds ?? []).map((r) => r.id)
     if (ids.length === 0) return ok({ data: [], count: 0, page, pageSize })
     query = query.in('reservation_id', ids)

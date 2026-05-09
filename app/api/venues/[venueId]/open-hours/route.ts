@@ -3,6 +3,7 @@ import { requireVenueAccess, requireSuperAdmin } from '@/lib/api/authz'
 import { createClient } from '@/lib/supabase/server'
 import { UpsertOpenHoursSchema } from '@/lib/validators/venues'
 import type { Weekday } from '@/lib/types/venue'
+import { invalidate } from '@/lib/data/invalidate'
 
 type Params = { params: Promise<{ venueId: string }> }
 
@@ -88,6 +89,8 @@ export async function PUT(req: Request, { params }: Params) {
 
   const { error: insertError } = await supabase.from('venue_open_hours').insert(rows)
   if (insertError) return dbErr(insertError, 'insert open_hours')
+
+  invalidate.venueOpenHours(venueId)
 
   return ok({ success: true })
 }

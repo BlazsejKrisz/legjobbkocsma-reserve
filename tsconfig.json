@@ -5,6 +5,14 @@
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "noUncheckedIndexedAccess": true,
+    /* exactOptionalPropertyTypes was attempted but flagged 170 sites
+       across the codebase that pass `T | undefined` where `?: T` is
+       declared.  The fix is mechanical (`?: T | undefined` everywhere)
+       but high-risk for runtime regressions; defer to a focused PR. */
     "forceConsistentCasingInFileNames": true,
     "noEmit": true,
     "esModuleInterop": true,

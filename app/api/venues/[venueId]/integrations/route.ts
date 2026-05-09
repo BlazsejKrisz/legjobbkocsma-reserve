@@ -2,6 +2,7 @@ import { ok, err, safeJson, dbErr } from '@/lib/api/http'
 import { requireVenueAccess, requireSuperAdmin } from '@/lib/api/authz'
 import { createClient } from '@/lib/supabase/server'
 import { z } from 'zod'
+import { invalidate } from '@/lib/data/invalidate'
 
 type Params = { params: Promise<{ venueId: string }> }
 
@@ -50,5 +51,8 @@ export async function POST(req: Request, { params }: Params) {
     .single()
 
   if (error) return dbErr(error)
+
+  invalidate.venueIntegrations(venueId)
+
   return ok({ data }, { status: 201 })
 }

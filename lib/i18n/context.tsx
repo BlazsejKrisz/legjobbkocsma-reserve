@@ -24,13 +24,24 @@ function setLangCookie(l: Lang) {
 export function LangProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLangState] = useState<Lang>('en')
 
+  // Hydrate from cookie on mount + sync the document <html lang> so
+  // assistive tech and translation extensions see the active language.
+  // Doing this in an effect (rather than reading cookies in the server
+  // layout) keeps the layout cache-eligible for Next 16 cacheComponents.
   useEffect(() => {
-    setLangState(getLangCookie())
+    const fromCookie = getLangCookie()
+    setLangState(fromCookie)
+    if (typeof document !== 'undefined') {
+      document.documentElement.lang = fromCookie
+    }
   }, [])
 
   const setLang = (l: Lang) => {
     setLangCookie(l)
     setLangState(l)
+    if (typeof document !== 'undefined') {
+      document.documentElement.lang = l
+    }
   }
 
   return <LangContext.Provider value={{ lang, setLang }}>{children}</LangContext.Provider>

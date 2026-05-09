@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/auth/getSession'
 import { CustomerList } from '@/components/customers/CustomerList'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { getServerT } from '@/lib/i18n/serverT'
 
 export default async function CustomersPage() {
@@ -10,10 +11,7 @@ export default async function CustomersPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-lg font-semibold">{t.customers.title}</h1>
-        <p className="text-sm text-muted-foreground">{t.customers.subtitle}</p>
-      </div>
+      <PageHeader title={t.customers.title} subtitle={t.customers.subtitle} />
       <CustomerList />
     </div>
   )

@@ -40,18 +40,35 @@ export async function GET(_req: Request, { params }: Params) {
   }
   if (reservationsResult.error) return dbErr(reservationsResult.error)
 
-  const reservations = reservationsResult.data ?? []
+  const allReservations = reservationsResult.data ?? []
 
-  // venue_staff can only view customers who have reservations at their venue(s)
-  if (auth.session.isVenueStaff && auth.session.venueIds.length > 0) {
+  // Multi-tenant scope: venue_staff can only see the slice of this
+  // customer's history that overlaps with their assigned venues.  Without
+  // this filter, any staff who happened to share a single customer with
+  // another tenant would also see that customer's bookings at all other
+  // venues — names of competitors' venues, dates, party sizes.
+  const reservations = (() => {
+    if (!auth.session.isVenueStaff || auth.session.venueIds.length === 0) {
+      return allReservations
+    }
     const accessible = new Set(auth.session.venueIds.map(String))
-    const hasAccess = reservations.some((r) => {
+    return allReservations.filter((r) => {
       const req = (r.requested_venue as unknown as { id: string } | null)?.id
       const asg = (r.assigned_venue as unknown as { id: string } | null)?.id
       return accessible.has(String(req)) || accessible.has(String(asg))
     })
-    if (!hasAccess) return err('Forbidden', { status: 403 })
+  })()
+
+  // After filtering, if the staff has no overlap they don't see the
+  // customer at all (404 instead of 403 — same posture as not existing).
+  if (
+    auth.session.isVenueStaff &&
+    auth.session.venueIds.length > 0 &&
+    reservations.length === 0
+  ) {
+    return err('Customer not found', { status: 404 })
   }
+
   const totalGuests = reservations.reduce((sum, r) => sum + r.party_size, 0)
   const completedCount = reservations.filter((r) => r.status === 'completed').length
   const cancelledCount = reservations.filter((r) => r.status === 'cancelled').length

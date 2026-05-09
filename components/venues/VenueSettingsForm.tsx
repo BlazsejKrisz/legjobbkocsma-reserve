@@ -215,7 +215,7 @@ function NumberField({
       <div className="flex-1">
         <Label className="text-sm font-medium">{label}</Label>
         {hint && <p className="text-xs text-muted-foreground mt-0.5">{hint}</p>}
-        {errors[name] && <p className="text-[11px] text-red-400 mt-0.5">{errors[name]?.message}</p>}
+        {errors[name] && <p className="text-[11px] text-destructive mt-0.5">{errors[name]?.message}</p>}
       </div>
       <Input
         type="number"

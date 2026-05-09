@@ -55,7 +55,7 @@ export function CreateVenueDialog({ open, onClose }: Props) {
             <Label className="text-xs">{t.venues.name}</Label>
             <Input {...register('name')} className="h-9 text-sm" placeholder={t.venues.name_placeholder} />
             {errors.name && (
-              <p className="text-[11px] text-red-400">{errors.name.message}</p>
+              <p className="text-[11px] text-destructive">{errors.name.message}</p>
             )}
           </div>
 
@@ -70,7 +70,7 @@ export function CreateVenueDialog({ open, onClose }: Props) {
               {t.venues.slug_hint}
             </p>
             {errors.slug && (
-              <p className="text-[11px] text-red-400">{errors.slug.message}</p>
+              <p className="text-[11px] text-destructive">{errors.slug.message}</p>
             )}
           </div>
 

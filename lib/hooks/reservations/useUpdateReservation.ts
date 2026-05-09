@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { qk } from '@/lib/query/keys'
 import { apiFetch } from '@/lib/types/api'
+import type { Reservation } from '@/lib/types/reservation'
 
 type UpdatePayload = {
   id: string
@@ -20,6 +21,11 @@ type UpdatePayload = {
   ends_at?: string
 }
 
+// Optimistic update for status changes — particularly cancel: the row
+// fades / disappears immediately on click, before the server confirms.
+// On error we restore the previous cache so the row reappears.  Same
+// pattern as Linear/Vercel: action feels instant, network failures
+// surface via toast.
 export function useUpdateReservation() {
   const qc = useQueryClient()
 
@@ -29,14 +35,45 @@ export function useUpdateReservation() {
         method: 'PATCH',
         body: JSON.stringify(patch),
       }),
+    // Snapshot the affected query caches before applying the optimistic
+    // change so onError can roll back exactly what we touched.
+    onMutate: async (vars) => {
+      // Cancel inflight queries first so they don't overwrite our
+      // optimistic update on settle.
+      await qc.cancelQueries({ queryKey: qk.overflow.all() })
+      await qc.cancelQueries({ queryKey: qk.reservations.all() })
+
+      const overflowSnapshots = qc.getQueriesData<{ data: Reservation[] }>({
+        queryKey: qk.overflow.all(),
+      })
+
+      // Cancel-flow optimistic: remove the row from every overflow list
+      // we have cached so the queue updates instantly.
+      if (vars.status === 'cancelled') {
+        for (const [key] of overflowSnapshots) {
+          qc.setQueryData<{ data: Reservation[] }>(key, (old) => {
+            if (!old) return old
+            return { ...old, data: old.data.filter((r) => r.id !== vars.id) }
+          })
+        }
+      }
+
+      return { overflowSnapshots }
+    },
+    onError: (err, _vars, ctx) => {
+      // Roll back every overflow snapshot we patched.
+      if (ctx?.overflowSnapshots) {
+        for (const [key, snapshot] of ctx.overflowSnapshots) {
+          qc.setQueryData(key, snapshot)
+        }
+      }
+      toast.error('Failed to update', { description: err.message })
+    },
     onSuccess: (_, vars) => {
       toast.success('Reservation updated')
       qc.invalidateQueries({ queryKey: qk.reservations.all() })
       qc.invalidateQueries({ queryKey: qk.reservations.detail(vars.id) })
       qc.invalidateQueries({ queryKey: qk.overflow.all() })
-    },
-    onError: (err) => {
-      toast.error('Failed to update', { description: err.message })
     },
   })
 }

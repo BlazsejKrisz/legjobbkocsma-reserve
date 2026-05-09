@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto'
 import { ok, err } from '@/lib/api/http'
 import { createAdminClient } from '@/lib/supabase/server'
 
@@ -13,19 +14,42 @@ import { createAdminClient } from '@/lib/supabase/server'
 //   3, 4     → in flight (intermediate, ignored)
 //   6        → delivered
 //
-// Security: SeeMe doesn't sign callbacks.  We restrict to their callback IP
-// (80.249.169.123 per the dashboard) — this is a soft guard since the only
-// effect of a forged callback is updating an outbox row's status to a
-// less-pessimistic state, which doesn't trigger any further action.
+// Security: SeeMe doesn't sign callbacks.  We layer two gates:
+//
+//   1. A shared-secret token in the URL query (`?secret=…`) that we
+//      configured into the SeeMe callback URL when registering it.
+//      Without this an attacker who guesses an outbox id can flip rows
+//      to `dead` via the failure code path — silencing customer comms.
+//   2. Optional IP allow-list for the SeeMe edge (80.249.169.123) when
+//      `SMS_CALLBACK_REQUIRE_IP=1`.  Defence-in-depth, not the primary
+//      auth — `x-forwarded-for` can be spoofed before reaching Vercel.
+//
+// We never accept a transition that would silence a previously-confirmed
+// failure (`dead → delivered`); the status flow is one-way to terminal.
 const SEEME_CALLBACK_IP = '80.249.169.123'
 
+function checkCallbackSecret(req: Request): boolean {
+  const expected = process.env.SMS_CALLBACK_SECRET
+  if (!expected) return true  // gate disabled — local dev only, document this
+  const url = new URL(req.url)
+  const provided = url.searchParams.get('secret') ?? ''
+  const a = Buffer.from(provided)
+  const b = Buffer.from(expected)
+  if (a.length !== b.length) return false
+  return timingSafeEqual(a, b)
+}
+
 export async function GET(req: Request) {
+  if (!checkCallbackSecret(req)) {
+    return err('Forbidden', { status: 403 })
+  }
+
   // Best-effort source check.  Behind Vercel's proxy, x-forwarded-for is
   // the only real source IP signal.  In dev / staging this won't match;
   // gate the strict check behind an env var.
   if (process.env.SMS_CALLBACK_REQUIRE_IP === '1') {
     const xff = req.headers.get('x-forwarded-for') ?? ''
-    const sourceIp = xff.split(',')[0].trim()
+    const sourceIp = xff.split(',')[0]?.trim() ?? ''
     if (sourceIp !== SEEME_CALLBACK_IP) {
       return err('Forbidden', { status: 403 })
     }
@@ -72,6 +96,10 @@ export async function GET(req: Request) {
   }
 
   if (FAILED.has(code)) {
+    // Forward-only state transition: only flip to `dead` from non-terminal
+    // statuses we'd expect a DLR to update.  Do NOT allow `delivered →
+    // dead` (which would silence a confirmed delivery), and require the
+    // row exist as an SMS to keep accidental cross-channel updates out.
     await admin
       .from('notification_outbox')
       .update({
@@ -80,6 +108,7 @@ export async function GET(req: Request) {
       })
       .eq('id', outboxId)
       .eq('channel', 'sms')
+      .in('status', ['pending', 'sending', 'sent', 'failed'])
     return ok({ updated: 'failed' })
   }
 

@@ -47,6 +47,27 @@ export async function POST(req: Request) {
 
   const supabase = createAdminClient()
 
+  // Defence-in-depth: verify every requested table actually belongs to
+  // the venue the caller has access to.  Without this, a support user
+  // could pin tables across venues by passing crossed ids — even though
+  // the RPC may also catch this, an extra layer here prevents the
+  // request from ever reaching SQL with mismatched ids.
+  if (!payload.table_ids?.length) {
+    return err('At least one table is required', { status: 400 })
+  }
+  const { data: ownedTables, error: ownErr } = await supabase
+    .from('tables')
+    .select('id, venue_id')
+    .in('id', payload.table_ids)
+  if (ownErr) return dbErr(ownErr, 'tables_ownership_check')
+  if (
+    !ownedTables ||
+    ownedTables.length !== payload.table_ids.length ||
+    ownedTables.some((t) => Number(t.venue_id) !== Number(payload.venue_id))
+  ) {
+    return err('One or more tables do not belong to this venue', { status: 400 })
+  }
+
   // 1. Upsert customer
   const { data: customer, error: customerErr } = await supabase.rpc(
     'get_or_create_customer',

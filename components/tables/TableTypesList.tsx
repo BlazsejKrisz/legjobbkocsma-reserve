@@ -79,7 +79,7 @@ function TableTypeDialog({
           <div className="flex flex-col gap-1.5">
             <Label className="text-xs">{t.table_types.name}</Label>
             <Input {...register('name')} className="h-9 text-sm" placeholder={t.table_types.name_placeholder} />
-            {errors.name && <p className="text-xs text-red-400">{errors.name.message}</p>}
+            {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
           </div>
           <div className="flex flex-col gap-1.5">
             <Label className="text-xs">{t.table_types.code}</Label>
@@ -159,7 +159,7 @@ export function TableTypesList({ venueId }: Props) {
                 <TableCell className="text-xs font-mono text-muted-foreground">{tt.code}</TableCell>
                 <TableCell>
                   <Badge className={tt.is_active
-                    ? 'bg-emerald-500/15 text-emerald-400 text-[10px]'
+                    ? 'bg-success/15 text-success text-[10px]'
                     : 'bg-zinc-500/15 text-zinc-400 text-[10px]'
                   }>
                     {tt.is_active ? t.table_types.active : t.table_types.inactive}

@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/auth/getSession'
 import { VenueList } from '@/components/venues/VenueList'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { getServerT } from '@/lib/i18n/serverT'
 
 export default async function VenuesPage() {
@@ -9,12 +10,8 @@ export default async function VenuesPage() {
   if (session.isVenueStaff) redirect('/dashboard')
 
   return (
-    <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-lg font-semibold">{t.venues.title}</h1>
-        <p className="text-sm text-muted-foreground">{t.venues.subtitle}</p>
-      </div>
-
+    <div className="flex flex-col gap-6">
+      <PageHeader title={t.venues.title} subtitle={t.venues.subtitle} />
       <VenueList isSuperAdmin={session.isSuperAdmin} />
     </div>
   )

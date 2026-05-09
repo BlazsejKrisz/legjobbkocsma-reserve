@@ -9,6 +9,7 @@ import { drainOne } from '@/lib/notifications/drain'
 import { resolveChannel, defaultChannel } from '@/lib/notifications/channel'
 import { toE164 } from '@/lib/phone/parse'
 import type { NotificationKind } from '@/lib/notifications/types'
+import { sanitizePostgrestSearch } from '@/lib/api/postgrestSearch'
 
 type CreateReservationRpcResult = {
   reservation_id: number
@@ -63,10 +64,10 @@ export async function GET(req: Request) {
   if (source) query = query.eq('source', source)
   if (dateFrom) query = query.gte(sortBy, dateFrom)
   if (dateTo) query = query.lte(sortBy, dateTo)
-  if (search) {
-    const escaped = search.replace(/[%_\\]/g, '\\$&')
+  const safeSearch = sanitizePostgrestSearch(search)
+  if (safeSearch) {
     query = query.or(
-      `customers.full_name.ilike.%${escaped}%,customers.email.ilike.%${escaped}%,customers.phone.ilike.%${escaped}%`,
+      `customers.full_name.ilike.%${safeSearch}%,customers.email.ilike.%${safeSearch}%,customers.phone.ilike.%${safeSearch}%`,
     )
   }
 

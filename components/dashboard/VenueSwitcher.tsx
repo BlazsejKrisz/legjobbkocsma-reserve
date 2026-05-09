@@ -1,7 +1,13 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ChevronDown } from 'lucide-react'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 type VenueOption = { id: string; name: string }
 
@@ -10,23 +16,30 @@ type Props = {
   venues: VenueOption[]
 }
 
+// Refined venue picker — shadcn Select instead of bare <select>.
+// Matches the rest of the dashboard (Radix-driven popover, focus trap,
+// keyboard nav, theming via the tokens) and looks consistent across
+// platforms instead of the native chrome differing on Mac/Windows/Linux.
 export function VenueSwitcher({ currentId, venues }: Props) {
   const router = useRouter()
 
   if (venues.length <= 1) return null
 
   return (
-    <div className="relative inline-flex items-center">
-      <select
-        value={currentId}
-        onChange={(e) => router.push(`/dashboard/venues/${e.target.value}`)}
-        className="appearance-none rounded-lg border border-border bg-background pl-3 pr-7 py-1.5 text-sm font-medium text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
-      >
+    <Select
+      value={currentId}
+      onValueChange={(id) => router.push(`/dashboard/venues/${id}`)}
+    >
+      <SelectTrigger className="h-8 w-auto min-w-[180px] gap-1.5 text-sm font-medium">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
         {venues.map((v) => (
-          <option key={v.id} value={v.id}>{v.name}</option>
+          <SelectItem key={v.id} value={v.id}>
+            {v.name}
+          </SelectItem>
         ))}
-      </select>
-      <ChevronDown className="pointer-events-none absolute right-2 h-3.5 w-3.5 text-muted-foreground" />
-    </div>
+      </SelectContent>
+    </Select>
   )
 }

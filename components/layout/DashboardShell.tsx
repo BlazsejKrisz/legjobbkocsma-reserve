@@ -47,7 +47,7 @@ export default async function DashboardShell({
       {/* Sidebar – desktop only.  Below lg (1024px) we use the hamburger
           MobileNav so tablets and phones get full content width — important
           for the timeline grid and other wide views. */}
-      <aside className="hidden w-60 shrink-0 border-r border-border/60 lg:flex lg:flex-col h-screen sticky top-0 overflow-y-auto">
+      <aside className="hidden w-[252px] shrink-0 border-r border-border/60 lg:flex lg:flex-col h-screen sticky top-0 overflow-y-auto scrollbar-thin">
         <SidebarContent role={session.role} initialOverflowCount={overflowCount} canSeeOverflow={canSeeOverflow} staffVenueId={staffVenueId} />
       </aside>
 
@@ -55,11 +55,14 @@ export default async function DashboardShell({
           to min-width:auto, which would otherwise let wide children (e.g.
           the timeline grid) push the whole page wider than the viewport. */}
       <div className="flex flex-1 flex-col min-h-screen min-w-0">
-        {/* Top bar */}
-        <header className="flex h-13 items-center justify-between border-b border-border/60 bg-background px-4 md:px-6" style={{ height: '52px' }}>
+        {/* Top bar — sticky, refined.  Backdrop blur + subtle border
+            mimics the topbars in Linear / Vercel / Stripe.  Sits at
+            48px to match the sidebar's brand-row height for a clean
+            cross-page horizontal alignment. */}
+        <header className="sticky top-0 z-30 flex h-12 items-center justify-between border-b border-border/60 bg-background/80 backdrop-blur-md px-3 md:px-5">
           <div className="flex items-center gap-3 lg:hidden">
             <MobileNav role={session.role} initialOverflowCount={overflowCount} canSeeOverflow={canSeeOverflow} staffVenueId={staffVenueId} />
-            <span className="text-sm font-semibold">
+            <span className="text-[13px] font-semibold tracking-[-0.02em]">
               Legjobb<span className="text-primary">Kocsma</span>
             </span>
           </div>
@@ -82,23 +85,25 @@ export default async function DashboardShell({
           {!(session.isSuperAdmin || session.isSupport) && (
             <div className="hidden lg:block" />
           )}
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-0.5">
             <HelpButton />
-            <div className="mx-1 h-4 w-px bg-border" />
+            <div className="mx-1.5 h-4 w-px bg-border/60" />
             <LanguageSwitcher />
-            <div className="mx-1 h-4 w-px bg-border" />
+            <div className="mx-1.5 h-4 w-px bg-border/60" />
             <ThemeToggle />
-            <div className="mx-1 h-4 w-px bg-border" />
+            <div className="mx-1.5 h-4 w-px bg-border/60" />
             <LogoutButton />
           </div>
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto px-3 py-4 sm:px-5 sm:py-6 md:px-8">
+        <main className="flex-1 overflow-y-auto px-3 py-5 sm:px-5 sm:py-6 md:px-8 md:py-8">
           <Suspense
             fallback={
-              <div className="flex h-32 items-center justify-center">
-                <p className="text-sm text-muted-foreground">Loading…</p>
+              <div className="flex h-32 items-center justify-center gap-2 text-sm text-muted-foreground">
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-muted-foreground/50 animate-pulse" />
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-muted-foreground/50 animate-pulse [animation-delay:120ms]" />
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-muted-foreground/50 animate-pulse [animation-delay:240ms]" />
               </div>
             }
           >

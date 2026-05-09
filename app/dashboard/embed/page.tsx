@@ -137,9 +137,9 @@ export default async function EmbedAnalyticsPage() {
                     <td className="px-4 py-2.5 font-medium">{d.domain}</td>
                     <td className="px-4 py-2.5 tabular-nums text-muted-foreground">{d.loads}</td>
                     <td className="px-4 py-2.5 tabular-nums">{d.submits}</td>
-                    <td className="px-4 py-2.5 tabular-nums text-green-600">{d.confirmed}</td>
+                    <td className="px-4 py-2.5 tabular-nums text-success">{d.confirmed}</td>
                     <td className="px-4 py-2.5 tabular-nums text-yellow-600">{d.pending}</td>
-                    <td className="px-4 py-2.5 tabular-nums text-red-500">{d.errors}</td>
+                    <td className="px-4 py-2.5 tabular-nums text-destructive">{d.errors}</td>
                     <td className="px-4 py-2.5 tabular-nums font-medium">{d.rate}%</td>
                   </tr>
                 ))}
@@ -170,7 +170,7 @@ export default async function EmbedAnalyticsPage() {
                 {errors.map((e) => (
                   <tr key={e.reason} className="border-b border-border last:border-0">
                     <td className="px-4 py-2.5 font-mono text-xs">{e.reason}</td>
-                    <td className="px-4 py-2.5 tabular-nums text-red-500">{e.count}</td>
+                    <td className="px-4 py-2.5 tabular-nums text-destructive">{e.count}</td>
                   </tr>
                 ))}
               </tbody>

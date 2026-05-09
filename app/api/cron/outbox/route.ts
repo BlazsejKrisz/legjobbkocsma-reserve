@@ -1,7 +1,82 @@
-import { ok, err } from '@/lib/api/http'
+import { ok } from '@/lib/api/http'
+import { checkCronAuth } from '@/lib/api/cronAuth'
 import { createAdminClient } from '@/lib/supabase/server'
 
 const BATCH_SIZE = 20
+
+// 10s timeout per outbound provider call.  Without this a stalled upstream
+// would pin the cron until the runtime kills it, blocking the rest of the
+// batch.  Combined with SSRF host validation (private IPs / non-https URLs
+// rejected at module load), this keeps the dispatcher boundary tight.
+const FETCH_TIMEOUT_MS = 10_000
+
+// Refuse to point at private networks or cloud metadata endpoints.  These
+// are the classic SSRF targets when an env var is misconfigured to a
+// localhost/link-local URL — once we're sending POSTs with our own bearer
+// token, an attacker who controls FRUIT_API_URL gets free internal calls.
+//
+// Coverage:
+//   IPv4: loopback (127/8, 0.0.0.0), link-local (169.254/16),
+//         RFC1918 (10/8, 172.16-31/12, 192.168/16),
+//         CGNAT (100.64.0.0/10), AWS/GCP metadata IPs.
+//   IPv6: loopback (::1), unspecified (::), link-local (fe80::/10),
+//         unique-local (fc00::/7), embedded IPv4-loopback (::ffff:127.0.0.1).
+//   Names: localhost, *.internal, *.local — common k8s / mDNS suffixes.
+function assertSafeHttpsUrl(raw: string, name: string): URL {
+  const u = new URL(raw)
+  if (u.protocol !== 'https:') {
+    throw new Error(`${name} must use https://`)
+  }
+  const rawHost = u.hostname.toLowerCase()
+  // IPv6 hosts in URLs are wrapped in []; URL.hostname returns them
+  // bracketless.  Strip any leftover IPv6 zone-id ("%eth0").
+  const host = rawHost.replace(/%.*$/, '')
+
+  // Hostname-style blocklist
+  if (
+    host === 'localhost' ||
+    host.endsWith('.internal') ||
+    host.endsWith('.local')
+  ) {
+    throw new Error(`${name} points at a disallowed host: ${host}`)
+  }
+
+  // IPv4 blocklist
+  if (/^(\d{1,3}\.){3}\d{1,3}$/.test(host)) {
+    const blockedIpv4 =
+      host === '0.0.0.0' ||
+      host.startsWith('127.') ||
+      host.startsWith('10.') ||
+      host.startsWith('192.168.') ||
+      host === '169.254.169.254' ||
+      host.startsWith('169.254.') ||
+      /^172\.(1[6-9]|2\d|3[01])\./.test(host) ||
+      // CGNAT (100.64.0.0/10)
+      /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./.test(host)
+    if (blockedIpv4) {
+      throw new Error(`${name} points at a disallowed host: ${host}`)
+    }
+  }
+
+  // IPv6 blocklist (URL hostname for IPv6 is bracketless lowercase hex)
+  if (host.includes(':')) {
+    const blockedIpv6 =
+      host === '::1' ||
+      host === '::' ||
+      host.startsWith('fe80:') ||  // link-local
+      host.startsWith('fc') ||      // unique-local fc00::/7 (fc, fd)
+      host.startsWith('fd') ||
+      host.startsWith('::ffff:127.') ||
+      host.startsWith('::ffff:10.') ||
+      host.startsWith('::ffff:192.168.') ||
+      host.startsWith('::ffff:169.254.')
+    if (blockedIpv6) {
+      throw new Error(`${name} points at a disallowed host: ${host}`)
+    }
+  }
+
+  return u
+}
 
 /**
  * Outbox worker — called by Vercel Cron (or equivalent scheduler).
@@ -16,12 +91,25 @@ const BATCH_SIZE = 20
  * server-admin Supabase client.
  */
 export async function GET(req: Request) {
-  const auth = req.headers.get('authorization')
-  if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
-    return err('Unauthorized', { status: 401 })
-  }
+  const cronErr = checkCronAuth(req)
+  if (cronErr) return cronErr
 
   const supabase = createAdminClient()
+
+  // Recover rows stuck in 'delivering' from a previous failed worker
+  // before claiming a new batch.  Without this, a Vercel runtime kill
+  // mid-dispatch would orphan rows forever.
+  //
+  // Ships in migration 040.  If it's not deployed yet we log once and
+  // continue — the dispatch loop still works, just without the
+  // crashed-worker recovery layer.
+  const { data: revived, error: sweepErr } = await supabase.rpc('sweep_stuck_integration_outbox')
+  if (sweepErr) {
+    console.warn('[cron/outbox] sweep skipped:', sweepErr.message)
+  } else if (revived && revived > 0) {
+    console.warn(`[cron/outbox] recovered ${revived} stuck-delivering row(s)`)
+  }
+
   const results: Record<string, { delivered: number; failed: number; errors: string[] }> = {}
 
   // Process known providers; extend this array as new providers are added
@@ -114,7 +202,10 @@ async function dispatchFruit(event: {
     throw new Error('Fruit integration not configured (missing FRUIT_API_URL or FRUIT_API_KEY)')
   }
 
-  const res = await fetch(`${fruitApiUrl}/reservations/sync`, {
+  const base = assertSafeHttpsUrl(fruitApiUrl, 'FRUIT_API_URL')
+  const target = new URL('reservations/sync', base.toString().endsWith('/') ? base : new URL(base.toString() + '/'))
+
+  const res = await fetch(target, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -122,10 +213,11 @@ async function dispatchFruit(event: {
       'Idempotency-Key': event.dedup_key,
     },
     body: JSON.stringify(event.payload),
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   })
 
   if (!res.ok) {
     const body = await res.text().catch(() => '(no body)')
-    throw new Error(`Fruit API ${res.status}: ${body}`)
+    throw new Error(`Fruit API ${res.status}: ${body.slice(0, 500)}`)
   }
 }

@@ -2,6 +2,7 @@ import { ok, err, safeJson, dbErr } from '@/lib/api/http'
 import { requireSuperAdmin } from '@/lib/api/authz'
 import { createClient } from '@/lib/supabase/server'
 import { ReorderTablesSchema } from '@/lib/validators/tables'
+import { invalidate } from '@/lib/data/invalidate'
 
 type Params = { params: Promise<{ venueId: string }> }
 
@@ -42,6 +43,8 @@ export async function POST(req: Request, { params }: Params) {
   const r2 = await Promise.all(phase2)
   const fail2 = r2.find((r) => r.error)
   if (fail2?.error) return dbErr(fail2.error, 'reorder phase 2')
+
+  invalidate.venueTables(venueId)
 
   return ok({ success: true })
 }

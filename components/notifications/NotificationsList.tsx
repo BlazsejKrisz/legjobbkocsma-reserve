@@ -17,6 +17,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { StatCard as SharedStatCard } from '@/components/layout/StatCard'
 import {
   Select,
   SelectContent,
@@ -35,11 +36,11 @@ import { useT } from '@/lib/i18n/useT'
 const PAGE_SIZE = 50
 
 const STATUS_TONE: Record<NotificationRow['status'], string> = {
-  sent:    'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
-  failed:  'border-amber-500/30 bg-amber-500/10 text-amber-300',
+  sent:    'border-success/30 bg-success/10 text-success',
+  failed:  'border-warning/30 bg-warning/10 text-warning',
   dead:    'border-destructive/30 bg-destructive/10 text-destructive',
-  pending: 'border-blue-500/30 bg-blue-500/10 text-blue-300',
-  sending: 'border-blue-500/30 bg-blue-500/10 text-blue-300',
+  pending: 'border-info/30 bg-info/10 text-info',
+  sending: 'border-info/30 bg-info/10 text-info',
 }
 
 function formatTimestamp(iso: string): string {
@@ -55,7 +56,7 @@ function maskRecipient(value: string, channel: 'email' | 'sms'): string {
   // Light masking for at-a-glance scans without leaking full PII into screenshots.
   if (channel === 'email') {
     const [local, domain] = value.split('@')
-    if (!domain) return value
+    if (!local || !domain) return value
     const visible = local.length <= 2 ? local : local.slice(0, 2) + '…'
     return `${visible}@${domain}`
   }
@@ -301,18 +302,33 @@ function Th({ children, className }: { children?: React.ReactNode; className?: s
   )
 }
 
-function StatCard({ label, value, tone }: { label: string; value: number; tone: 'emerald' | 'amber' | 'destructive' | 'blue' }) {
-  const toneClass: Record<string, string> = {
-    emerald:    'border-emerald-500/30 bg-emerald-500/5 text-emerald-300',
-    amber:      'border-amber-500/30 bg-amber-500/5 text-amber-300',
-    destructive:'border-destructive/30 bg-destructive/5 text-destructive',
-    blue:       'border-blue-500/30 bg-blue-500/5 text-blue-300',
-  }
+// Compact tone-mapped wrapper around the shared StatCard.  Keeps the
+// existing call signature `<StatCard label value tone={'emerald' | …} />`
+// at the call-sites in this file; consolidates the visual rendering
+// into the shared primitive.
+const NL_TONE_MAP = {
+  emerald: 'success',
+  amber: 'warning',
+  destructive: 'destructive',
+  blue: 'info',
+} as const
+
+function StatCard({
+  label,
+  value,
+  tone,
+}: {
+  label: string
+  value: number
+  tone: keyof typeof NL_TONE_MAP
+}) {
   return (
-    <div className={`rounded-lg border p-3 ${toneClass[tone]}`}>
-      <p className="text-[11px] uppercase tracking-wide opacity-80">{label}</p>
-      <p className="text-xl font-semibold mt-1">{value.toLocaleString()}</p>
-    </div>
+    <SharedStatCard
+      layout="compact"
+      tone={NL_TONE_MAP[tone]}
+      label={label}
+      value={value.toLocaleString()}
+    />
   )
 }
 

@@ -28,7 +28,7 @@ function corsHeaders(origin: string) {
 
 function getIp(req: Request): string {
   const fwd = (req as unknown as { headers: Headers }).headers.get('x-forwarded-for')
-  return fwd?.split(',')[0].trim() ?? 'unknown'
+  return fwd?.split(',')[0]?.trim() ?? 'unknown'
 }
 
 /**
@@ -106,12 +106,23 @@ export async function POST(req: Request) {
   // 2. Read raw body — needed for honeypot check before Zod strips unknown fields
   const rawBody = await safeJson(req)
 
-  // 3. HONEYPOT — silent accept, do not reveal to bots
+  // 3. Per-IP rate limit BEFORE honeypot, so a bot stuffing _hp:'x' still
+  //    consumes counter quota and cannot probe the endpoint at unbounded
+  //    rates.  Honeypot rejection alone is too soft.
+  const ip = getIp(req)
+  const ipPreOk = await checkIpRateLimit(ip)
+  if (!ipPreOk) {
+    return err('too_many_requests', { status: 429, headers: earlyCors })
+  }
+
+  // 4. HONEYPOT — silent accept, do not reveal to bots.  Order matters:
+  //    runs after the API key + rate limit gates so honeypot cannot be
+  //    used to skip them.
   if (typeof rawBody === 'object' && rawBody !== null && (rawBody as Record<string, unknown>)._hp) {
     return ok({ reservation_id: null, status: 'confirmed' })
   }
 
-  // 4. Zod validation (strips _hp and other unknown fields)
+  // 5. Zod validation (strips _hp and other unknown fields)
   const parsed = PartnerReservationSchema.safeParse(rawBody)
   if (!parsed.success) {
     // Resolve origin for the error response if possible
@@ -139,14 +150,7 @@ export async function POST(req: Request) {
 
   const CORS = corsHeaders(resolved.origin)
 
-  // 6. RATE LIMIT — IP
-  const ip = getIp(req)
-  const ipOk = await checkIpRateLimit(ip)
-  if (!ipOk) {
-    return err('too_many_requests', { status: 429, headers: CORS })
-  }
-
-  // 7. RATE LIMIT — email
+  // 6. RATE LIMIT — email (per-customer-email window, separate from IP)
   if (payload.customer.email) {
     const emailOk = await checkEmailRateLimit(payload.customer.email)
     if (!emailOk) {
@@ -154,7 +158,7 @@ export async function POST(req: Request) {
     }
   }
 
-  // 8. Business logic ──────────────────────────────────────────────────────────
+  // 7. Business logic ──────────────────────────────────────────────────────────
 
   const partySizeErr = validatePartySize(payload.party_size)
   if (partySizeErr) return err('party_size must be between 1 and 500', { status: 400, headers: CORS })

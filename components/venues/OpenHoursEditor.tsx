@@ -136,7 +136,7 @@ export function OpenHoursEditor({ venueId, readOnly }: Props) {
                           className="h-8 w-28 text-sm disabled:opacity-40"
                         />
                         {overnight && (
-                          <p className="text-[10px] text-amber-400 mt-0.5">{t.open_hours.next_day}</p>
+                          <p className="text-[10px] text-warning mt-0.5">{t.open_hours.next_day}</p>
                         )}
                       </td>
                     </tr>

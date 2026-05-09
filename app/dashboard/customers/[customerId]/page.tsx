@@ -6,10 +6,10 @@ import { format, parseISO } from 'date-fns'
 import { ChevronLeft } from 'lucide-react'
 
 const STATUS_STYLES: Record<string, string> = {
-  confirmed: 'bg-emerald-500/12 text-emerald-400',
-  completed: 'bg-blue-500/12 text-blue-400',
-  cancelled: 'bg-red-500/12 text-red-400',
-  pending_manual_review: 'bg-amber-500/12 text-amber-400',
+  confirmed: 'bg-success/12 text-success',
+  completed: 'bg-info/12 text-info',
+  cancelled: 'bg-destructive/12 text-destructive',
+  pending_manual_review: 'bg-warning/12 text-warning',
   no_show: 'bg-zinc-500/12 text-zinc-400',
 }
 

@@ -57,12 +57,17 @@ export const CancelReservationSchema = z.object({
 export type CancelReservationPayload = z.infer<typeof CancelReservationSchema>
 
 // Partner API (public-facing booking form)
+//
+// `starts_at` MUST be a strict ISO datetime with explicit offset.  The
+// previous looser `new Date(v)` parse accepted formats like
+// "2026-05-08T01:00:00+10:00", which after `.slice(0, 10)` to extract
+// the date can yield a string that's a different day than the UTC
+// instant — letting bookings slip past max_advance_booking_days by ±1
+// day on tz boundaries.  z.iso.datetime({ offset: true }) requires
+// the offset and rejects ambiguous shapes.
 export const PartnerReservationSchema = z.object({
   venue_slug: z.string().min(1),
-  starts_at: z.string().min(1).refine(
-    (v) => !isNaN(new Date(v).getTime()),
-    { message: 'Invalid datetime' },
-  ),
+  starts_at: z.iso.datetime({ offset: true }),
   party_size: z.coerce.number().int().min(1).max(500),
   duration_minutes: z.number().int().min(15).max(1440).optional(),
   table_type_code: z.string().optional(),

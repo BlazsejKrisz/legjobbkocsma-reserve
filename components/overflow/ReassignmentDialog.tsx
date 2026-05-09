@@ -17,6 +17,13 @@ import { Separator } from '@/components/ui/separator'
 import { Input } from '@/components/ui/input'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Checkbox } from '@/components/ui/checkbox'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import { useReallocationOptions, useReassignReservation } from '@/lib/hooks/overflow/useOverflow'
 import { useAvailableTables } from '@/lib/hooks/venues/useTables'
@@ -308,21 +315,21 @@ function TablePicker({
                 <span className="font-medium">{tbl.table_name}</span>
                 {tbl.area && <span className="ml-1.5 text-muted-foreground text-xs">· {tbl.area}</span>}
               </div>
-              <span className={`shrink-0 text-xs tabular-nums ${fitsAlone ? 'text-muted-foreground' : tooSmall ? 'text-amber-400' : 'text-muted-foreground'}`}>
+              <span className={`shrink-0 text-xs tabular-nums ${fitsAlone ? 'text-muted-foreground' : tooSmall ? 'text-warning' : 'text-muted-foreground'}`}>
                 {tbl.capacity_min}–{tbl.capacity_max} {t.common.pax}
               </span>
-              <span className={`shrink-0 h-2 w-2 rounded-full ${tbl.is_free ? 'bg-green-500' : 'bg-red-500/60'}`} />
+              <span className={`shrink-0 h-2 w-2 rounded-full ${tbl.is_free ? 'bg-success' : 'bg-destructive/60'}`} />
             </label>
           )
         })}
       </div>
       {isUnderCapacity && (
-        <p className="text-xs text-amber-400 flex items-center gap-1.5">
+        <p className="text-xs text-warning flex items-center gap-1.5">
           ⚠ Selected tables fit {totalCapacity} pax combined — party is {partySize}.
         </p>
       )}
       {isOverCapacity && (
-        <p className="text-xs text-amber-400 flex items-center gap-1.5">
+        <p className="text-xs text-warning flex items-center gap-1.5">
           ⚠ Selected table minimum is {selectedTables[0]?.capacity_min} pax — party is only {partySize}.
         </p>
       )}
@@ -397,8 +404,8 @@ function ReassignForm({ reservation, onClose }: { reservation: Reservation; onCl
 
   const groupBy = (opts: ReallocationOption[]) =>
     opts.reduce<Record<string, ReallocationOption[]>>((acc, opt) => {
-      if (!acc[opt.option_kind]) acc[opt.option_kind] = []
-      acc[opt.option_kind].push(opt)
+      const bucket = (acc[opt.option_kind] ??= [])
+      bucket.push(opt)
       return acc
     }, {})
 
@@ -511,7 +518,7 @@ function ReassignForm({ reservation, onClose }: { reservation: Reservation; onCl
         )}
 
         {sendEmail && (
-          <p className="text-xs text-amber-400">
+          <p className="text-xs text-warning">
             {t.reassign.email_warning}
           </p>
         )}
@@ -550,7 +557,7 @@ function ReassignForm({ reservation, onClose }: { reservation: Reservation; onCl
           <InfoField label={t.reassign.requested_venue}>{reservation.requested_venue?.name ?? '—'}</InfoField>
           {reservation.overflow_reason && (
             <InfoField label={t.reassign.overflow_reason}>
-              <span className="text-amber-400">
+              <span className="text-warning">
                 {OVERFLOW_REASON_LABELS[reservation.overflow_reason] ?? reservation.overflow_reason}
               </span>
             </InfoField>
@@ -663,15 +670,19 @@ function ReassignForm({ reservation, onClose }: { reservation: Reservation; onCl
               <Label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                 {t.reassign.venue}
               </Label>
-              <select
+              <Select
                 value={manualVenueId}
-                onChange={(e) => { setManualVenueId(e.target.value); setManualTableIds([]) }}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                onValueChange={(id) => { setManualVenueId(id); setManualTableIds([]) }}
               >
-                {allVenues.map((v) => (
-                  <option key={v.id} value={v.id}>{v.name}</option>
-                ))}
-              </select>
+                <SelectTrigger className="text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {allVenues.map((v) => (
+                    <SelectItem key={v.id} value={String(v.id)}>{v.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

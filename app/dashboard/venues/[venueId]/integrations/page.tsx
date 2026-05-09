@@ -1,13 +1,11 @@
 import { redirect, notFound } from 'next/navigation'
-import Link from 'next/link'
-import { ChevronLeft } from 'lucide-react'
 import { getSession } from '@/lib/auth/getSession'
 import { getVenue, getVenueIntegrations } from '@/lib/data/venues'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { OutboxDashboard } from '@/components/integrations/OutboxDashboard'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { getServerT } from '@/lib/i18n/serverT'
 
 type Params = { params: Promise<{ venueId: string }> }
@@ -25,20 +23,13 @@ export default async function IntegrationsPage({ params }: Params) {
   if (!venue) notFound()
 
   return (
-    <div className="flex flex-col gap-5 max-w-2xl">
-      <div className="flex items-center gap-2">
-        <Button variant="ghost" size="sm" className="h-7" asChild>
-          <Link href={`/dashboard/venues/${venueId}`}>
-            <ChevronLeft className="h-3.5 w-3.5" />
-            {venue.name}
-          </Link>
-        </Button>
-      </div>
-
-      <div>
-        <h1 className="text-lg font-semibold">{t.integrations_page.title}</h1>
-        <p className="text-sm text-muted-foreground">{venue.name}</p>
-      </div>
+    <div className="flex flex-col gap-6 max-w-2xl">
+      <PageHeader
+        title={t.integrations_page.title}
+        subtitle={venue.name}
+        backHref={`/dashboard/venues/${venueId}`}
+        backLabel={venue.name}
+      />
 
       {integrations.length > 0 && (
         <div className="space-y-3">
@@ -53,7 +44,7 @@ export default async function IntegrationsPage({ params }: Params) {
                   <Badge
                     className={
                       intg.is_enabled
-                        ? 'bg-emerald-500/15 text-emerald-400 text-[10px]'
+                        ? 'bg-success/15 text-success text-[10px]'
                         : 'bg-zinc-500/15 text-zinc-400 text-[10px]'
                     }
                   >

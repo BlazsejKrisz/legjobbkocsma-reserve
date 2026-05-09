@@ -163,7 +163,7 @@ const VENUE_NAV_ITEMS: VenueNavItem[] = [
 
 function extractVenueId(pathname: string): string | null {
   const m = pathname.match(/^\/dashboard\/venues\/([^/]+)/)
-  return m ? m[1] : null
+  return m?.[1] ?? null
 }
 
 // ─── Nav link ─────────────────────────────────────────────────────────────────
@@ -189,24 +189,39 @@ function NavLink({
     <Link
       href={href}
       onClick={onClose}
+      // Active rows get a left-edge brand bar instead of a full bg fill,
+      // matching how Linear/Vercel/Stripe render their active nav state.
+      // The bar is rendered via `before:` so it sits flush left without
+      // extra DOM nodes.  Subtle, clearly-readable, distinct.
       className={cn(
-        'group flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-all duration-150',
-        indent && 'ml-1 py-1.5 text-[13px]',
+        'group relative flex items-center gap-3 rounded-md',
+        'px-3 py-2 text-sm transition-colors duration-150',
+        'before:absolute before:left-0 before:top-2 before:bottom-2 before:w-[2px] before:rounded-r-full before:bg-primary before:transition-opacity',
+        indent && 'ml-2 py-1.5 text-[13px]',
         isActive
-          ? 'bg-primary/10 text-primary font-medium'
-          : 'text-muted-foreground hover:bg-black/5 hover:text-foreground font-normal',
+          ? 'text-foreground font-medium bg-foreground/[0.04] before:opacity-100'
+          : 'text-muted-foreground hover:text-foreground hover:bg-foreground/[0.025] before:opacity-0',
       )}
     >
       <Icon
         className={cn(
           'shrink-0 transition-colors',
-          indent ? 'h-3.5 w-3.5' : 'h-4 w-4',
-          isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground',
+          indent ? 'h-4 w-4' : 'h-[17px] w-[17px]',
+          isActive ? 'text-primary' : 'text-muted-foreground/80 group-hover:text-foreground',
         )}
+        strokeWidth={1.75}
       />
-      <span className="flex-1 truncate">{label}</span>
+      <span className="flex-1 truncate tracking-tight">{label}</span>
       {badge != null && badge > 0 && (
-        <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-bold text-primary-foreground">
+        <span
+          className={cn(
+            'inline-flex h-5 min-w-[20px] items-center justify-center',
+            'rounded-md px-1.5 text-[11px] font-semibold tabular-nums',
+            isActive
+              ? 'bg-primary text-primary-foreground'
+              : 'bg-warning/15 text-warning ring-1 ring-inset ring-warning/30',
+          )}
+        >
           {badge > 99 ? '99+' : badge}
         </span>
       )}
@@ -307,30 +322,29 @@ export function SidebarContent({ role, initialOverflowCount, canSeeOverflow = fa
 
   return (
     <div className="flex h-full flex-col bg-sidebar">
-      {/* Brand header */}
+      {/* Brand header — refined: smaller mark, kerning, subtle underline
+          on hover.  The "K" in Kocsma takes the brand color so the lockup
+          has a focal point without resorting to a colored background. */}
       <div className="flex items-center justify-between px-4 py-4">
         <Link
           href="/dashboard"
           onClick={onClose}
           className="flex items-center gap-2.5 group"
         >
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary shadow-lg shadow-primary/20">
-            <Flame className="h-4 w-4 text-primary-foreground" />
+          <div className="relative flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/80 shadow-sm shadow-primary/30 ring-1 ring-inset ring-white/10">
+            <Flame className="h-4 w-4 text-primary-foreground" strokeWidth={2.25} />
           </div>
-          <span className="text-sm font-semibold tracking-tight text-foreground">
+          <span className="text-sm font-semibold tracking-[-0.02em] text-foreground">
             Legjobb<span className="text-primary">Kocsma</span>
           </span>
         </Link>
-        {/* No close button here — when used inside the mobile Sheet, Radix
-            renders its own X.  onClose is still passed down so nav links
-            can close the sheet on click. */}
       </div>
 
       {/* Divider */}
       <div className="mx-4 h-px bg-border/60" />
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-0.5">
+      <nav className="flex-1 overflow-y-auto scrollbar-thin px-3 py-3 space-y-0.5">
         {visibleTopItems.map((item) => {
           const isOverflow = item.href === '/dashboard/overflow'
           const isActive =
@@ -356,10 +370,10 @@ export function SidebarContent({ role, initialOverflowCount, canSeeOverflow = fa
         {/* Venue sub-nav */}
         {venueId && visibleVenueItems.length > 0 && (
           <div className="mt-4 pt-3 border-t border-border/60">
-            <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/50">
+            <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/70">
               Venue
             </p>
-            <div className="space-y-0.5">
+            <div className="space-y-px">
               {visibleVenueItems.map((item) => {
                 const href = `/dashboard/venues/${venueId}${item.suffix}`
                 const isActive = item.exact
@@ -383,11 +397,20 @@ export function SidebarContent({ role, initialOverflowCount, canSeeOverflow = fa
         )}
       </nav>
 
-      {/* Role badge */}
-      <div className="mx-4 mb-4 mt-2">
-        <div className="flex items-center gap-2 rounded-lg border border-border bg-background/60 px-3 py-2.5">
-          <div className="h-2 w-2 rounded-full bg-primary" />
-          <span className="text-[11px] font-medium text-muted-foreground">
+      {/* Role badge — refined: subtler, dot uses the success/info tone
+          per role family, sits in a stripped-back chip rather than a
+          card.  Reads as "status indicator" instead of "primary CTA". */}
+      <div className="mx-3 mb-3 mt-1">
+        <div className="flex items-center gap-2.5 rounded-md border border-border/60 bg-background/40 px-3 py-2">
+          <span
+            className={cn(
+              'h-2 w-2 rounded-full ring-[3px]',
+              role === 'super_admin' && 'bg-primary ring-primary/15',
+              role === 'support' && 'bg-info ring-info/15',
+              role === 'venue_staff' && 'bg-success ring-success/15',
+            )}
+          />
+          <span className="text-xs font-semibold uppercase tracking-[0.06em] text-muted-foreground">
             {t.role[role]}
           </span>
         </div>

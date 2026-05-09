@@ -17,14 +17,24 @@ export const metadata: Metadata = {
   icons: {
     icon: '/lklogo.png',
   },
+  // Internal admin tool — do not surface in search engines.
+  robots: { index: false, follow: false },
 };
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
   display: "swap",
-  subsets: ["latin"],
+  // Hungarian uses ő/ű which fall outside the basic latin subset on some
+  // systems.  Including latin-ext keeps the font from falling back to a
+  // different glyph family for those characters.
+  subsets: ["latin", "latin-ext"],
 });
 
+// Note: <html lang> stays static at render time because reading the cookie
+// here would mark the layout as dynamic and conflict with Next 16
+// cacheComponents.  The actual rendered lang is synced client-side from
+// LangProvider via a `document.documentElement.lang` effect — screen
+// readers and translation extensions then key off the live attribute.
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -35,8 +45,11 @@ export default function RootLayout({
       <body className={`${geistSans.className} antialiased`}>
         <ThemeProvider
           attribute="class"
-          defaultTheme="dark"
-          enableSystem={false}
+          // Honour the user's system preference; the toggle still lets
+          // them override.  `defaultTheme="dark"` would force dark on
+          // every device regardless of system setting.
+          defaultTheme="system"
+          enableSystem
           disableTransitionOnChange
         >
           <QueryProvider>

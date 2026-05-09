@@ -15,11 +15,16 @@ import {
   useDeleteVenueLogo,
 } from '@/lib/hooks/venues/useVenues'
 import { isVenueLogoStorageUrl } from '@/lib/api/storage'
+import { useT } from '@/lib/i18n/useT'
 import type { Venue } from '@/lib/types/venue'
 
-const ACCEPT = 'image/png,image/jpeg,image/webp,image/svg+xml'
+// SVG was removed from the upload allowed mimes in migration of the
+// /api/venues/[venueId]/logo route (XSS via stored SVG).  Mirror that
+// here so the file picker doesn't suggest something that will fail.
+const ACCEPT = 'image/png,image/jpeg,image/webp'
 
 export function VenueBrandingEditor({ venueId }: { venueId: string }) {
+  const t = useT()
   const { data, isLoading } = useQuery({
     queryKey: qk.venues.detail(venueId),
     queryFn: () => apiFetch<{ data: Venue }>(`/api/venues/${venueId}`),
@@ -92,15 +97,15 @@ export function VenueBrandingEditor({ venueId }: { venueId: string }) {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h2 className="text-sm font-semibold">Venue branding</h2>
+        <h2 className="text-sm font-semibold">{t.venue_branding.title}</h2>
         <p className="text-xs text-muted-foreground mt-0.5">
-          Used in confirmation emails sent to guests.
+          {t.venue_branding.title_subtitle}
         </p>
       </div>
 
       {/* Logo */}
       <div className="flex flex-col gap-3">
-        <Label className="text-xs">Logo</Label>
+        <Label className="text-xs">{t.venue_branding.logo_label}</Label>
 
         {/* Preview / current state */}
         <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 p-3">
@@ -119,8 +124,8 @@ export function VenueBrandingEditor({ venueId }: { venueId: string }) {
           <div className="flex flex-col gap-1 min-w-0 flex-1">
             <p className="text-xs font-medium">
               {currentLogo
-                ? isUploaded ? 'Uploaded file' : 'External URL'
-                : 'No logo set'}
+                ? isUploaded ? t.venue_branding.logo_uploaded : t.venue_branding.logo_external
+                : t.venue_branding.logo_none}
             </p>
             {currentLogo && (
               <p className="text-[11px] text-muted-foreground truncate font-mono">
@@ -134,10 +139,10 @@ export function VenueBrandingEditor({ venueId }: { venueId: string }) {
               variant="ghost"
               onClick={handleRemoveLogo}
               disabled={deleteLogo.isPending || updateBranding.isPending}
-              className="h-7 shrink-0 text-muted-foreground hover:text-destructive"
+              className="shrink-0 text-muted-foreground hover:text-destructive"
             >
-              <Trash2 className="h-3.5 w-3.5" />
-              Remove
+              <Trash2 />
+              {t.venue_branding.logo_remove}
             </Button>
           )}
         </div>
@@ -147,11 +152,11 @@ export function VenueBrandingEditor({ venueId }: { venueId: string }) {
           <TabsList>
             <TabsTrigger value="upload">
               <Upload className="h-3.5 w-3.5" />
-              Upload file
+              {t.venue_branding.tab_upload}
             </TabsTrigger>
             <TabsTrigger value="url">
               <Link2 className="h-3.5 w-3.5" />
-              External URL
+              {t.venue_branding.tab_url}
             </TabsTrigger>
           </TabsList>
 
@@ -166,10 +171,10 @@ export function VenueBrandingEditor({ venueId }: { venueId: string }) {
                 className="text-xs file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-primary-foreground hover:file:bg-primary/90 file:cursor-pointer"
               />
               <p className="text-[11px] text-muted-foreground">
-                PNG, JPEG, WebP, or SVG · max 2MB · uploading replaces the current logo.
+                {t.venue_branding.logo_hint}
               </p>
               {uploadLogo.isPending && (
-                <p className="text-[11px] text-muted-foreground">Uploading…</p>
+                <p className="text-[11px] text-muted-foreground">{t.venue_branding.logo_uploading}</p>
               )}
             </div>
           </TabsContent>
@@ -184,16 +189,15 @@ export function VenueBrandingEditor({ venueId }: { venueId: string }) {
               />
               <div className="flex items-center justify-between gap-2">
                 <p className="text-[11px] text-muted-foreground">
-                  Publicly accessible image URL.
+                  {t.venue_branding.logo_url_hint}
                 </p>
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={handleSaveUrl}
                   disabled={updateBranding.isPending || !isUrlDirty}
-                  className="h-7"
                 >
-                  {updateBranding.isPending ? 'Saving…' : 'Use URL'}
+                  {updateBranding.isPending ? t.venue_branding.saving : t.venue_branding.logo_use_url}
                 </Button>
               </div>
             </div>
@@ -203,41 +207,41 @@ export function VenueBrandingEditor({ venueId }: { venueId: string }) {
 
       {/* Contact fields */}
       <div className="flex flex-col gap-3">
-        <Label className="text-xs">Contact details</Label>
+        <Label className="text-xs">{t.venue_branding.contact_details}</Label>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5">
-            <Label className="text-[11px] text-muted-foreground">Address</Label>
+            <Label className="text-[11px] text-muted-foreground">{t.venue_branding.address_label}</Label>
             <Input
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              placeholder="Budapest, Kazinczy u. 14."
+              placeholder={t.venue_branding.address_placeholder}
               className="text-sm h-8"
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label className="text-[11px] text-muted-foreground">Phone</Label>
+            <Label className="text-[11px] text-muted-foreground">{t.venue_branding.phone_label}</Label>
             <Input
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              placeholder="+36 1 234 5678"
+              placeholder={t.venue_branding.phone_placeholder}
               className="text-sm h-8"
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label className="text-[11px] text-muted-foreground">Website</Label>
+            <Label className="text-[11px] text-muted-foreground">{t.venue_branding.website_label}</Label>
             <Input
               value={website}
               onChange={(e) => setWebsite(e.target.value)}
-              placeholder="https://legjobbkocsma.hu/helyszin"
+              placeholder={t.venue_branding.website_placeholder}
               className="text-sm h-8"
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label className="text-[11px] text-muted-foreground">Reply-to email</Label>
+            <Label className="text-[11px] text-muted-foreground">{t.venue_branding.email_contact_label}</Label>
             <Input
               value={emailContact}
               onChange={(e) => setEmailContact(e.target.value)}
-              placeholder="info@helyszin.hu"
+              placeholder={t.venue_branding.email_contact_placeholder}
               type="email"
               className="text-sm h-8"
             />
@@ -251,7 +255,7 @@ export function VenueBrandingEditor({ venueId }: { venueId: string }) {
           onClick={handleSaveBranding}
           disabled={updateBranding.isPending || !isContactDirty}
         >
-          {updateBranding.isPending ? 'Saving…' : 'Save contact details'}
+          {updateBranding.isPending ? t.venue_branding.saving : t.venue_branding.save}
         </Button>
       </div>
     </div>

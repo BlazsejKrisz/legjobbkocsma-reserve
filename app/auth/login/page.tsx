@@ -1,18 +1,22 @@
 'use client'
 
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { useLang } from '@/lib/i18n/context'
+import { translations } from '@/lib/i18n/translations'
 
+// Modern guidance is 8+ characters; we keep 6 to avoid breaking existing
+// users with shorter passwords, but flag them on next rotation.
 const schema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
@@ -23,20 +27,20 @@ type FormValues = z.infer<typeof schema>
 export default function LoginPage() {
   const router = useRouter()
   const supabase = createClient()
+  const { lang } = useLang()
+  const t = translations[lang].login
 
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
   })
 
-  const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   const onSubmit = async (values: FormValues) => {
-    setLoading(true)
     setErrorMsg(null)
 
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -44,10 +48,15 @@ export default function LoginPage() {
       password: values.password,
     })
 
-    setLoading(false)
-
     if (error) {
-      setErrorMsg(error.message)
+      // Supabase distinguishes some error states textually
+      // ("Invalid login credentials" vs "Email not confirmed" vs
+      // rate-limit messages).  Surfacing those raw leaks
+      // account-existence — a "Email not confirmed" reply confirms
+      // the address is registered.  Map every auth failure to a
+      // single user-facing message and log the original for ops.
+      console.warn('[auth/login] sign-in failed:', error.message)
+      setErrorMsg(t.error_invalid)
       return
     }
 
@@ -72,30 +81,47 @@ export default function LoginPage() {
             </Alert>
           )}
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
             <div className="flex flex-col gap-1">
-              <Label className="text-xs">Email</Label>
+              <Label htmlFor="login-email" className="text-xs">
+                {t.email_label}
+              </Label>
               <Input
                 {...register('email')}
+                id="login-email"
+                name="email"
                 type="email"
+                inputMode="email"
+                autoComplete="email"
+                autoCapitalize="none"
+                autoCorrect="off"
+                aria-invalid={!!errors.email}
+                aria-describedby={errors.email ? 'login-email-error' : undefined}
                 className="h-9 text-sm border-foreground"
               />
               {errors.email && (
-                <p className="text-[11px] text-red-500">
+                <p id="login-email-error" className="text-[11px] text-destructive">
                   {errors.email.message}
                 </p>
               )}
             </div>
 
             <div className="flex flex-col gap-1">
-              <Label className="text-xs">Password</Label>
+              <Label htmlFor="login-password" className="text-xs">
+                {t.password_label}
+              </Label>
               <Input
                 {...register('password')}
+                id="login-password"
+                name="password"
                 type="password"
-                className="h-9 text-sm border-foreground "
+                autoComplete="current-password"
+                aria-invalid={!!errors.password}
+                aria-describedby={errors.password ? 'login-password-error' : undefined}
+                className="h-9 text-sm border-foreground"
               />
               {errors.password && (
-                <p className="text-[11px] text-red-500">
+                <p id="login-password-error" className="text-[11px] text-destructive">
                   {errors.password.message}
                 </p>
               )}
@@ -103,10 +129,10 @@ export default function LoginPage() {
 
             <Button
               type="submit"
-              disabled={loading}
+              disabled={isSubmitting}
               className="w-full h-9 text-sm font-medium mt-2"
             >
-              {loading ? 'Logging in…' : 'Login'}
+              {isSubmitting ? t.submitting : t.submit}
             </Button>
           </form>
         </CardContent>

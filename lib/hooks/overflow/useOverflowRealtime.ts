@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
@@ -17,8 +17,6 @@ import { qk } from '@/lib/query/keys'
  */
 export function useOverflowRealtime() {
   const qc = useQueryClient()
-  // Track the previous count so we know when a genuinely new item arrived
-  const prevCountRef = useRef<number | null>(null)
 
   useEffect(() => {
     const supabase = createClient()

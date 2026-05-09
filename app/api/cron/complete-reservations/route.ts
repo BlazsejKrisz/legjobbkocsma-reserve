@@ -1,11 +1,10 @@
-import { ok, err, dbErr } from '@/lib/api/http'
+import { ok, dbErr } from '@/lib/api/http'
+import { checkCronAuth } from '@/lib/api/cronAuth'
 import { createAdminClient } from '@/lib/supabase/server'
 
 export async function GET(req: Request) {
-  const auth = req.headers.get('authorization')
-  if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
-    return err('Unauthorized', { status: 401 })
-  }
+  const cronErr = checkCronAuth(req)
+  if (cronErr) return cronErr
 
   const supabase = createAdminClient()
   const { data, error } = await supabase.rpc('batch_mark_reservations_completed')

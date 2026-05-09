@@ -67,3 +67,29 @@ export function useReassignReservation() {
     },
   })
 }
+
+// Quick-accept: when an overflow row's "fits now" badge is showing,
+// support can confirm it in one click without going through the full
+// reassignment dialog.  The server re-runs availability and uses the
+// first `'requested'` match.
+export type QuickAcceptResult = {
+  accepted: true
+  table_ids: number[]
+  notification_channel: 'email' | 'sms' | 'none'
+}
+
+export function useQuickAcceptOverflow() {
+  const qc = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ reservationId }: { reservationId: string }) =>
+      apiFetch<QuickAcceptResult>(`/api/overflow/${reservationId}/quick-accept`, {
+        method: 'POST',
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.overflow.all() })
+      qc.invalidateQueries({ queryKey: qk.reservations.all() })
+      qc.invalidateQueries({ queryKey: qk.dashboard.overview() })
+    },
+  })
+}

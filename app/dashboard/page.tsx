@@ -1,10 +1,36 @@
 import { Suspense } from 'react'
 import Link from 'next/link'
-import { AlertTriangle, ArrowRight, CalendarDays, Building2, BarChart2, UserSquare2, Search } from 'lucide-react'
+import {
+  AlertTriangle,
+  ArrowRight,
+  CalendarDays,
+  Building2,
+  BarChart2,
+  UserSquare2,
+  Search,
+} from 'lucide-react'
 import { getSession } from '@/lib/auth/getSession'
 import { OverviewStats } from '@/components/dashboard/OverviewStats'
+import { TodayHourStrip } from '@/components/dashboard/TodayHourStrip'
+import { UpcomingWeekStrip } from '@/components/dashboard/UpcomingWeekStrip'
+import { RecentActivityFeed } from '@/components/dashboard/RecentActivityFeed'
 import { redirect } from 'next/navigation'
 import { getServerT } from '@/lib/i18n/serverT'
+
+// Skeleton placeholder shapes — used for the per-component <Suspense>
+// fallbacks so the layout doesn't pop in jarringly when data arrives.
+function StatGridSkeleton() {
+  return (
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div key={i} className="h-[124px] animate-pulse rounded-xl bg-muted/30" />
+      ))}
+    </div>
+  )
+}
+function PanelSkeleton({ height = 'h-64' }: { height?: string }) {
+  return <div className={`${height} animate-pulse rounded-xl bg-muted/30`} />
+}
 
 export default async function DashboardPage() {
   const [session, t] = await Promise.all([getSession(), getServerT()])
@@ -17,99 +43,114 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div className="flex flex-col gap-8">
-      {/* Page header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">{t.dashboard.title}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {t.dashboard.subtitle}
-        </p>
+    <div className="flex flex-col gap-7">
+      {/* ─── Header ───────────────────────────────────────────────────── */}
+      <div className="space-y-1">
+        <h1 className="text-2xl font-semibold tracking-tight">{t.dashboard.title}</h1>
+        <p className="text-sm text-muted-foreground">{t.dashboard.subtitle}</p>
       </div>
 
-      {/* Stats */}
-      <Suspense
-        fallback={
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-28 animate-pulse rounded-xl bg-muted/30" />
-            ))}
-          </div>
-        }
-      >
+      {/* ─── Stats grid ───────────────────────────────────────────────── */}
+      <Suspense fallback={<StatGridSkeleton />}>
         <OverviewStats session={session} />
       </Suspense>
 
-      {/* Quick actions */}
-      <div className="flex flex-col gap-3">
-        <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+      {/* ─── Today's hour strip ───────────────────────────────────────── */}
+      <Suspense fallback={<PanelSkeleton height="h-40" />}>
+        <TodayHourStrip />
+      </Suspense>
+
+      {/* ─── Two-column: upcoming week + recent activity ──────────────── */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Suspense fallback={<PanelSkeleton />}>
+          <UpcomingWeekStrip />
+        </Suspense>
+        <Suspense fallback={<PanelSkeleton />}>
+          <RecentActivityFeed />
+        </Suspense>
+      </div>
+
+      {/* ─── Quick links ──────────────────────────────────────────────── */}
+      <div className="flex flex-col gap-3 pt-2">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground/80">
           {t.dashboard.quick_links}
         </p>
         <div className="flex flex-wrap gap-2">
-          <Link
+          <QuickLink
             href="/dashboard/reservations"
-            className="group flex items-center gap-2 rounded-lg border border-border/60 bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
-          >
-            <CalendarDays className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-            {t.dashboard.all_reservations}
-            <ArrowRight className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
-          </Link>
-
+            icon={CalendarDays}
+            label={t.dashboard.all_reservations}
+          />
           {(session.isSuperAdmin || session.isSupport) && (
-            <Link
+            <QuickLink
               href="/dashboard/availability"
-              className="group flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-4 py-2.5 text-sm font-medium text-emerald-400 transition-colors hover:border-emerald-500/40 hover:bg-emerald-500/10"
-            >
-              <Search className="h-4 w-4" />
-              {t.availability.action}
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
+              icon={Search}
+              label={t.availability.action}
+              tone="success"
+            />
           )}
-
           {(session.isSuperAdmin || session.isSupport) && (
-            <Link
+            <QuickLink
               href="/dashboard/overflow"
-              className="group flex items-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 px-4 py-2.5 text-sm font-medium text-amber-400 transition-colors hover:border-amber-500/40 hover:bg-amber-500/10"
-            >
-              <AlertTriangle className="h-4 w-4" />
-              {t.dashboard.manual_review_queue}
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
+              icon={AlertTriangle}
+              label={t.dashboard.manual_review_queue}
+              tone="warning"
+            />
           )}
-
           {(session.isSuperAdmin || session.isSupport) && (
-            <Link
+            <QuickLink
               href="/dashboard/customers"
-              className="group flex items-center gap-2 rounded-lg border border-border/60 bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
-            >
-              <UserSquare2 className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-              {t.dashboard.customer_profiles}
-              <ArrowRight className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
-            </Link>
+              icon={UserSquare2}
+              label={t.dashboard.customer_profiles}
+            />
           )}
-
           {(session.isSuperAdmin || session.isSupport) && (
-            <Link
+            <QuickLink
               href="/dashboard/stats"
-              className="group flex items-center gap-2 rounded-lg border border-border/60 bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
-            >
-              <BarChart2 className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-              {t.dashboard.statistics}
-              <ArrowRight className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
-            </Link>
+              icon={BarChart2}
+              label={t.dashboard.statistics}
+            />
           )}
-
           {session.isSuperAdmin && (
-            <Link
+            <QuickLink
               href="/dashboard/venues"
-              className="group flex items-center gap-2 rounded-lg border border-border/60 bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-primary"
-            >
-              <Building2 className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-              {t.dashboard.manage_venues}
-              <ArrowRight className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
-            </Link>
+              icon={Building2}
+              label={t.dashboard.manage_venues}
+            />
           )}
         </div>
       </div>
     </div>
+  )
+}
+
+// Refined quick-link chip.  Three tones: neutral default, success
+// (availability check — proactive flow), warning (overflow — needs
+// attention).  Using a small chip with a left-aligned icon, gap-2.5,
+// and an arrow that nudges right on hover gives the dashboard tactile
+// affordance without leaning on bright color blocks.
+type QuickLinkProps = {
+  href: string
+  icon: React.ElementType
+  label: string
+  tone?: 'default' | 'success' | 'warning'
+}
+function QuickLink({ href, icon: Icon, label, tone = 'default' }: QuickLinkProps) {
+  const styles =
+    tone === 'success'
+      ? 'border-success/25 bg-success/[0.06] text-success hover:border-success/40 hover:bg-success/10'
+      : tone === 'warning'
+      ? 'border-warning/30 bg-warning/[0.06] text-warning hover:border-warning/50 hover:bg-warning/10'
+      : 'border-border/80 bg-card text-foreground hover:border-foreground/25 hover:bg-muted/50'
+
+  return (
+    <Link
+      href={href}
+      className={`group inline-flex items-center gap-2.5 rounded-lg border px-3.5 py-2 text-[13px] font-medium transition-colors ${styles}`}
+    >
+      <Icon className="h-4 w-4" strokeWidth={1.75} />
+      {label}
+      <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+    </Link>
   )
 }

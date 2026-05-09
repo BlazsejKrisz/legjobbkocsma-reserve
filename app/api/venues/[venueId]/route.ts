@@ -7,6 +7,7 @@ import {
   isVenueLogoStorageUrl,
   getVenueLogoStoragePath,
 } from '@/lib/api/storage'
+import { invalidate } from '@/lib/data/invalidate'
 
 type Params = { params: Promise<{ venueId: string }> }
 
@@ -71,6 +72,8 @@ export async function PATCH(req: Request, { params }: Params) {
       await admin.storage.from(VENUE_LOGOS_BUCKET).remove([oldPath])
     }
   }
+
+  invalidate.venue(venueId)
 
   return ok({ success: true })
 }

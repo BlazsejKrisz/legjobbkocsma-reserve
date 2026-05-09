@@ -48,4 +48,9 @@ export const qk = {
     list: (params: Record<string, unknown>) => ['notifications', 'list', params] as const,
     stats: () => ['notifications', 'stats'] as const,
   },
+  customers: {
+    all: () => ['customers'] as const,
+    list: (params: Record<string, unknown>) => ['customers', 'list', params] as const,
+    detail: (id: string) => ['customers', id] as const,
+  },
 }

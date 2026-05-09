@@ -100,7 +100,7 @@ function TableDialog({
             <div className="flex flex-col gap-1.5 col-span-2">
               <Label className="text-xs">{t.tables.name}</Label>
               <Input {...register('name')} className="h-9 text-sm" placeholder={t.tables.name_placeholder} />
-              {errors.name && <p className="text-xs text-red-400">{errors.name.message}</p>}
+              {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
             </div>
             <div className="flex flex-col gap-1.5">
               <Label className="text-xs">{t.tables.min_capacity}</Label>
@@ -243,12 +243,12 @@ function TableRowItem({
         </TableCell>
         <TableCell className="text-center">
           {table.can_blend
-            ? <span className="text-[10px] text-emerald-400">{tRow.common.yes}</span>
+            ? <span className="text-[10px] text-success">{tRow.common.yes}</span>
             : <span className="text-[10px] text-muted-foreground">{tRow.common.no}</span>}
         </TableCell>
         <TableCell>
           <Badge className={table.is_active
-            ? 'bg-emerald-500/15 text-emerald-400 text-[10px]'
+            ? 'bg-success/15 text-success text-[10px]'
             : 'bg-zinc-500/15 text-zinc-400 text-[10px]'
           }>
             {table.is_active ? tRow.tables.active : tRow.tables.inactive}
@@ -263,7 +263,7 @@ function TableRowItem({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 text-muted-foreground hover:text-red-400"
+                className="h-7 w-7 text-muted-foreground hover:text-destructive"
                 onClick={() => setConfirmDeactivate(true)}
               >
                 <AlertTriangle className="h-3.5 w-3.5" />

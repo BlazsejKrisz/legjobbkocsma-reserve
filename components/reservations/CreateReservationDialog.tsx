@@ -57,7 +57,7 @@ type FormValues = {
 }
 
 function addMinutes(time: string, minutes: number): string {
-  const [h, m] = time.split(':').map(Number)
+  const [h = 0, m = 0] = time.split(':').map(Number)
   const total = h * 60 + m + minutes
   const newH = Math.floor(total / 60) % 24
   const newM = total % 60

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Sheet,
   SheetContent,
@@ -84,8 +84,8 @@ function formatEventLabel(ev: ReservationEvent, t: ReturnType<typeof useT>): str
 
   if (type === 'confirmation_email_sent') {
     const channel = (ev.new_value as { channel?: string } | null)?.channel
-    if (channel === 'sms') return labels.confirmation_sms_sent
-    return labels.confirmation_email_sent
+    if (channel === 'sms') return labels.confirmation_sms_sent ?? type
+    return labels.confirmation_email_sent ?? type
   }
 
   return labels[type] ?? type.replace(/_/g, ' ')
@@ -169,17 +169,17 @@ function ChangeTablesDialog({
                       <span className="font-medium">{tbl.table_name}</span>
                       {tbl.area && <span className="ml-1.5 text-muted-foreground text-xs">· {tbl.area}</span>}
                     </div>
-                    <span className={`shrink-0 text-xs tabular-nums ${fitsAlone ? 'text-muted-foreground' : 'text-amber-400'}`}>
+                    <span className={`shrink-0 text-xs tabular-nums ${fitsAlone ? 'text-muted-foreground' : 'text-warning'}`}>
                       {tbl.capacity_min}–{tbl.capacity_max} {t.common.pax}
                     </span>
-                    <span className={`shrink-0 h-2 w-2 rounded-full ${tbl.is_free ? 'bg-green-500' : 'bg-red-500/60'}`} />
+                    <span className={`shrink-0 h-2 w-2 rounded-full ${tbl.is_free ? 'bg-success' : 'bg-destructive/60'}`} />
                   </label>
                 )
               })}
             </div>
           )}
           {capacityWarning && (
-            <p className="text-xs text-amber-400">⚠ {t.detail.change_tables_capacity_warning}</p>
+            <p className="text-xs text-warning">⚠ {t.detail.change_tables_capacity_warning}</p>
           )}
         </div>
 
@@ -238,13 +238,18 @@ function EditReservationDialog({
     endTime   !== endIn.time   ||
     Number(partySize) !== reservation.party_size
 
-  // Reset the check verdict whenever the schedule fields move.
+  // Reset the check verdict whenever the schedule fields move.  Using
+  // useEffect rather than a setState-in-render branch — Strict Mode and
+  // concurrent rendering will retry renders, and setState during render
+  // is a documented React anti-pattern.
   const lastSig = `${startDate}|${startTime}|${endTime}|${partySize}`
   const [lastCheckedSig, setLastCheckedSig] = useState<string | null>(null)
-  if (availResult && lastCheckedSig !== null && lastSig !== lastCheckedSig) {
-    setAvailResult(null)
-    setLastCheckedSig(null)
-  }
+  useEffect(() => {
+    if (availResult && lastCheckedSig !== null && lastSig !== lastCheckedSig) {
+      setAvailResult(null)
+      setLastCheckedSig(null)
+    }
+  }, [availResult, lastCheckedSig, lastSig])
 
   const venueId =
     reservation.assigned_venue_id ??
@@ -412,13 +417,13 @@ function EditReservationDialog({
                 </Button>
               </div>
               {availResult === 'has_match' && (
-                <p className="flex items-center gap-1.5 text-[11px] text-emerald-400">
+                <p className="flex items-center gap-1.5 text-[11px] text-success">
                   <CheckCircle2 className="h-3 w-3" />
                   {t.detail.availability_has_match}
                 </p>
               )}
               {availResult === 'no_match' && (
-                <p className="flex items-center gap-1.5 text-[11px] text-amber-400">
+                <p className="flex items-center gap-1.5 text-[11px] text-warning">
                   <AlertTriangle className="h-3 w-3" />
                   {t.detail.availability_no_match}
                 </p>
@@ -437,7 +442,7 @@ function EditReservationDialog({
             <Button
               onClick={handleSaveToOverflow}
               disabled={moveToOverflow.isPending}
-              className="bg-amber-500 hover:bg-amber-500/90 text-amber-950"
+              className="bg-warning hover:bg-warning/90 text-warning-foreground"
             >
               {moveToOverflow.isPending ? t.common.saving : t.detail.save_to_overflow}
             </Button>
@@ -543,14 +548,14 @@ function DetailContent({ reservation }: { reservation: Reservation }) {
           value={
             reservation.assigned_venue
               ? reservation.assigned_venue.name
-              : <span className="text-amber-400">{t.detail.not_assigned}</span>
+              : <span className="text-warning">{t.detail.not_assigned}</span>
           }
         />
         {reservation.overflow_reason && (
           <Field
             label={t.detail.overflow_reason}
             value={
-              <span className="text-amber-400 text-xs">
+              <span className="text-warning text-xs">
                 {OVERFLOW_REASON_LABELS[reservation.overflow_reason] ?? reservation.overflow_reason}
               </span>
             }
@@ -652,12 +657,13 @@ function DetailContent({ reservation }: { reservation: Reservation }) {
             </div>
           </div>
         ) : (
-          <div
-            className="cursor-pointer rounded-md border border-transparent px-1 py-0.5 text-sm text-muted-foreground hover:border-border hover:text-foreground"
+          <button
+            type="button"
+            className="w-full text-left cursor-pointer rounded-md border border-transparent px-1 py-0.5 text-sm text-muted-foreground hover:border-border hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
             onClick={() => setEditingNotes(true)}
           >
             {notes || <span className="italic">{t.detail.click_to_add_notes}</span>}
-          </div>
+          </button>
         )}
       </div>
 
@@ -713,7 +719,7 @@ function DetailContent({ reservation }: { reservation: Reservation }) {
               <Button
                 size="sm"
                 variant="outline"
-                className="text-red-400 hover:text-red-300"
+                className="text-destructive hover:text-destructive"
                 disabled={update.isPending}
                 onClick={() => setCancelConfirmOpen(true)}
               >
@@ -735,7 +741,7 @@ function DetailContent({ reservation }: { reservation: Reservation }) {
             <Button
               size="sm"
               variant="outline"
-              className="text-green-500 hover:text-green-400"
+              className="text-success hover:text-success"
               disabled={revert.isPending}
               onClick={() => revert.mutate(reservation.id)}
             >

@@ -78,7 +78,7 @@ export function VenueList({ isSuperAdmin }: Props) {
                     <Circle
                       className={cn(
                         'h-2 w-2 fill-current',
-                        v.is_active ? 'text-emerald-400' : 'text-zinc-500',
+                        v.is_active ? 'text-success' : 'text-zinc-500',
                       )}
                     />
                     <span className="text-xs text-muted-foreground">

@@ -77,6 +77,31 @@ export const translations = {
       dialog_title: 'What\'s new',
       dismiss: 'Got it',
     },
+    // ── Help dialog ─────────────────────────────────────────────────────────
+    help: {
+      title: 'Help',
+      description: 'If you spot a bug, have feedback or a question, get in touch:',
+      role_developer: 'Developer',
+      close: 'Close',
+    },
+    // ── Error / loading / not-found boundaries ──────────────────────────────
+    errors: {
+      generic_title: 'Something went wrong',
+      generic_description: 'The page failed to render. Try again, or refresh if the issue persists.',
+      try_again: 'Try again',
+      not_found_title: 'Page not found',
+      not_found_description: "The page you were looking for doesn't exist or has been moved.",
+      back_to_dashboard: 'Back to dashboard',
+      ref_label: 'ref:',
+    },
+    // ── Login page ──────────────────────────────────────────────────────────
+    login: {
+      email_label: 'Email',
+      password_label: 'Password',
+      submit: 'Log in',
+      submitting: 'Logging in…',
+      error_invalid: 'Invalid email or password',
+    },
     // ── Notification channel picker ──────────────────────────────────────────
     channel: {
       label: 'Notification',
@@ -183,6 +208,8 @@ export const translations = {
       by_received: 'By received',
       by_reservation: 'By reservation',
       has_message: 'Guest left a message',
+      count_label_one: '{count} reservation',
+      count_label_other: '{count} reservations',
     },
     // ── Reservation filters ──────────────────────────────────────────────────
     filters: {
@@ -303,11 +330,21 @@ export const translations = {
       overflow_reason: 'Overflow reason',
       overflow_reason_tooltip: 'Why the system couldn\'t auto-assign this reservation. Common reasons: no tables available, party too large, outside open hours.',
       actions: 'Actions',
-      no_pending: 'No reservations pending manual review. 🎉',
+      no_pending: 'No reservations pending manual review.',
       reassign: 'Reassign',
       cancel: 'Cancel',
       cancel_title: 'Cancel reservation',
       cancel_description: 'This will remove the reservation from the overflow queue and mark it as cancelled.',
+      // Quick-accept: shown only when has_waitlist_match is true
+      quick_accept: 'Save',
+      quick_accept_title: 'Confirm reservation',
+      quick_accept_description_email: 'Confirms this reservation at the originally requested time using the now-available table. A confirmation email will be sent to the guest.',
+      quick_accept_description_sms: 'Confirms this reservation at the originally requested time using the now-available table. A confirmation SMS will be sent to the guest.',
+      quick_accept_description_no_channel: 'Confirms this reservation at the originally requested time using the now-available table. No notification will be sent (no contact method on file).',
+      quick_accept_confirm: 'Confirm',
+      quick_accept_pending: 'Confirming…',
+      quick_accept_success: 'Reservation confirmed',
+      quick_accept_no_match: 'Capacity disappeared just now. Use the full reassignment dialog instead.',
     },
     // ── Reassignment dialog ──────────────────────────────────────────────────
     reassign: {
@@ -355,6 +392,53 @@ export const translations = {
       option_group_venue_combined: 'Group venue · Combined tables',
       option_other_venue: 'Other venue',
       option_other_venue_combined: 'Other venue · Combined tables',
+    },
+    // ── Allowed origins editor — CORS whitelist UI for embedded booking widget
+    allowed_origins: {
+      title: 'Allowed origins (CORS whitelist)',
+      description: 'If empty, all origins are allowed. Enter a full origin, e.g.',
+      empty_state: 'None set — all origins are allowed',
+      input_placeholder: 'https://example.com',
+      add: 'Add',
+      error_invalid: 'Valid origin required (e.g. https://example.com)',
+      error_duplicate: 'This origin is already on the list',
+    },
+    // ── Venue branding editor (logo, address, contact) ────────────────────
+    venue_branding: {
+      title: 'Venue branding',
+      title_subtitle: 'Used in confirmation emails sent to guests.',
+      logo_label: 'Logo',
+      logo_uploaded: 'Uploaded file',
+      logo_external: 'External URL',
+      logo_none: 'No logo set',
+      tab_upload: 'Upload file',
+      tab_url: 'External URL',
+      logo_hint: 'PNG, JPEG, or WebP · max 2MB · uploading replaces the current logo.',
+      logo_url_hint: 'Publicly accessible image URL.',
+      logo_use_url: 'Use URL',
+      logo_uploading: 'Uploading…',
+      logo_remove: 'Remove',
+      contact_details: 'Contact details',
+      address_label: 'Address',
+      address_placeholder: 'Budapest, Kazinczy u. 14.',
+      phone_label: 'Phone',
+      phone_placeholder: '+36 1 234 5678',
+      website_label: 'Website',
+      website_placeholder: 'https://legjobbkocsma.hu/venue',
+      email_contact_label: 'Reply-to email',
+      email_contact_placeholder: 'info@venue.hu',
+      save: 'Save contact details',
+      saving: 'Saving…',
+    },
+    // ── Customer detail page ─────────────────────────────────────────────
+    customer_detail: {
+      back_to_customers: 'Back to customers',
+      stat_total: 'Total reservations',
+      stat_completed: 'Completed',
+      stat_cancelled: 'Cancelled',
+      stat_total_guests: 'Total guests',
+      reservation_history: 'Reservation history',
+      no_reservations: 'No reservations yet.',
     },
     // ── Venue settings ───────────────────────────────────────────────────────
     venue_settings: {
@@ -462,18 +546,43 @@ export const translations = {
       last_visit: 'Last visit',
       no_match: 'No customers match your search.',
       no_customers: 'No customers yet.',
+      customer_one: 'customer',
+      customer_other: 'customers',
     },
     // ── Dashboard overview ───────────────────────────────────────────────────
     overview: {
-      todays_reservations: 'Today\'s reservations',
-      todays_reservations_sub: 'Scheduled for today',
+      todays_reservations: 'Today',
+      todays_reservations_sub: 'All bookings starting today',
       confirmed_today: 'Confirmed today',
-      confirmed_today_sub: 'Ready to go',
-      manual_review: 'Manual review queue',
+      confirmed_today_sub: 'Awaiting arrival',
+      of_todays: 'of today',
+      vs_yesterday: 'vs yesterday',
+      tomorrow_outlook: 'Tomorrow',
+      tomorrow_outlook_sub: 'Already on the books',
+      upcoming_guests: 'Guests booked',
+      upcoming_guests_sub: 'Confirmed + queue, next 14 days',
+      manual_review: 'Manual review',
       needs_attention: 'Needs attention',
-      queue_clear: 'Queue clear',
+      queue_clear: 'Queue is clear',
       completion_rate: 'Completion rate',
       completion_rate_sub: 'Last 7 days',
+      // Today hour strip
+      today_hours_title: 'Today by the hour',
+      today_hours_empty_title: 'No bookings starting today',
+      today_hours_empty_hint: 'New bookings will appear here as they come in.',
+      reservation_one: 'reservation',
+      reservation_other: 'reservations',
+      guests_label: 'guests',
+      // Upcoming week
+      upcoming_week_title: 'Next 7 days',
+      upcoming_week_subtitle: 'Already-booked reservations on the calendar.',
+      peak: 'Peak',
+      // Recent activity
+      recent_activity_title: 'Recent activity',
+      recent_activity_subtitle: 'Latest reservations across all venues.',
+      recent_activity_empty: 'Nothing yet',
+      recent_activity_empty_hint: 'New reservations will show up here.',
+      see_all: 'See all',
     },
     // ── Timeline ─────────────────────────────────────────────────────────────
     timeline: {
@@ -490,8 +599,8 @@ export const translations = {
     // ── Dashboard page ───────────────────────────────────────────────────────
     dashboard: {
       title: 'Overview',
-      subtitle: 'Today\'s live snapshot — reservations, queue status, and 7-day completion rate',
-      quick_links: 'Quick links',
+      subtitle: 'Live snapshot of today, what\'s coming, and what needs your attention.',
+      quick_links: 'Jump to',
       all_reservations: 'All reservations',
       manual_review_queue: 'Manual review queue',
       customer_profiles: 'Customer profiles',
@@ -533,8 +642,19 @@ export const translations = {
       range_7d: 'Last 7 days',
       range_30d: 'Last 30 days',
       range_90d: 'Last 90 days',
-      range_upcoming: 'Next 30 days',
-      range_around: 'Past + upcoming',
+      // "Next 30 days" referred to upcoming pre-booked reservations,
+      // which staff misread as some kind of forecast.  Clarified to
+      // explicitly say "scheduled" so it's obvious these are bookings
+      // already in the system, not a prediction.
+      range_upcoming: 'Scheduled (next 30 days)',
+      range_around: 'Last 7 + scheduled 23 days',
+      // Empty state — shown when the selected range has zero
+      // reservations, replaces the otherwise-confusing wall of
+      // empty charts.
+      empty_title: 'No data in this range',
+      empty_description: 'No reservations match the selected period. Try a wider date range, or check the reservations list directly.',
+      empty_try_90d: 'Try last 90 days',
+      empty_browse_reservations: 'Browse reservations',
     },
     // ── Stats charts ─────────────────────────────────────────────────────────
     stats_charts: {
@@ -768,6 +888,28 @@ export const translations = {
       dialog_title: 'Újdonságok',
       dismiss: 'Rendben',
     },
+    help: {
+      title: 'Segítség',
+      description: 'Ha bármilyen hibát tapasztalsz, észrevételed vagy kérdésed van, keress bátran:',
+      role_developer: 'Fejlesztő',
+      close: 'Bezárás',
+    },
+    errors: {
+      generic_title: 'Hiba történt',
+      generic_description: 'Az oldal betöltése sikertelen. Próbáld újra, vagy frissítsd az oldalt ha a hiba továbbra is fennáll.',
+      try_again: 'Újrapróbálás',
+      not_found_title: 'Oldal nem található',
+      not_found_description: 'A keresett oldal nem létezik vagy átköltöztették.',
+      back_to_dashboard: 'Vissza a vezérlőpultra',
+      ref_label: 'azonosító:',
+    },
+    login: {
+      email_label: 'Email',
+      password_label: 'Jelszó',
+      submit: 'Belépés',
+      submitting: 'Belépés…',
+      error_invalid: 'Helytelen email vagy jelszó',
+    },
     channel: {
       label: 'Értesítés',
       email: 'Email',
@@ -869,6 +1011,8 @@ export const translations = {
       by_received: 'Beérkezés szerint',
       by_reservation: 'Foglalás szerint',
       has_message: 'A vendég üzenetet hagyott',
+      count_label_one: '{count} foglalás',
+      count_label_other: '{count} foglalás',
     },
     filters: {
       search_placeholder: 'Vendég keresése…',
@@ -985,11 +1129,20 @@ export const translations = {
       overflow_reason: 'Kézi feldolgozás oka',
       overflow_reason_tooltip: 'Miért nem tudta a rendszer automatikusan kiosztani. Gyakori okok: nincs szabad asztal, túl nagy a társaság, nyitvatartáson kívül.',
       actions: 'Műveletek',
-      no_pending: 'Nincs várakozó foglalás kézi feldolgozásra. 🎉',
+      no_pending: 'Nincs várakozó foglalás kézi feldolgozásra.',
       reassign: 'Átirányítás',
       cancel: 'Lemondás',
       cancel_title: 'Foglalás lemondása',
       cancel_description: 'A foglalás eltávolításra kerül a sorból és lemondottként lesz megjelölve.',
+      quick_accept: 'Mentés',
+      quick_accept_title: 'Foglalás megerősítése',
+      quick_accept_description_email: 'A foglalás megerősítésre kerül az eredetileg kért időpontban a most felszabadult asztalra. A vendég email visszaigazolást kap.',
+      quick_accept_description_sms: 'A foglalás megerősítésre kerül az eredetileg kért időpontban a most felszabadult asztalra. A vendég SMS visszaigazolást kap.',
+      quick_accept_description_no_channel: 'A foglalás megerősítésre kerül az eredetileg kért időpontban a most felszabadult asztalra. Nem küldünk értesítést (nincs elérhetőség megadva).',
+      quick_accept_confirm: 'Megerősítés',
+      quick_accept_pending: 'Megerősítés…',
+      quick_accept_success: 'Foglalás megerősítve',
+      quick_accept_no_match: 'A szabad hely épp most foglalódott le. Használd a teljes átirányítási ablakot.',
     },
     reassign: {
       title: 'Foglalás átirányítása',
@@ -1036,6 +1189,50 @@ export const translations = {
       option_group_venue_combined: 'Csoportos helyszín · Kombinált asztalok',
       option_other_venue: 'Másik helyszín',
       option_other_venue_combined: 'Másik helyszín · Kombinált asztalok',
+    },
+    allowed_origins: {
+      title: 'Engedélyezett originek (CORS whitelist)',
+      description: 'Ha üres, minden origin engedélyezett. Adj meg teljes origint, pl.',
+      empty_state: 'Nincs megadva — minden origin engedélyezett',
+      input_placeholder: 'https://pelda.hu',
+      add: 'Hozzáadás',
+      error_invalid: 'Érvényes origin szükséges (pl. https://pelda.hu)',
+      error_duplicate: 'Ez az origin már szerepel a listában',
+    },
+    venue_branding: {
+      title: 'Márkajelzés',
+      title_subtitle: 'A vendégeknek küldött visszaigazoló emailekben jelenik meg.',
+      logo_label: 'Logó',
+      logo_uploaded: 'Feltöltött fájl',
+      logo_external: 'Külső URL',
+      logo_none: 'Nincs logó beállítva',
+      tab_upload: 'Fájl feltöltése',
+      tab_url: 'Külső URL',
+      logo_hint: 'PNG, JPEG vagy WebP · max 2MB · feltöltés felülírja a jelenlegit.',
+      logo_url_hint: 'Nyilvánosan elérhető képi URL.',
+      logo_use_url: 'URL használata',
+      logo_uploading: 'Feltöltés…',
+      logo_remove: 'Eltávolítás',
+      contact_details: 'Elérhetőségi adatok',
+      address_label: 'Cím',
+      address_placeholder: 'Budapest, Kazinczy u. 14.',
+      phone_label: 'Telefon',
+      phone_placeholder: '+36 1 234 5678',
+      website_label: 'Weboldal',
+      website_placeholder: 'https://legjobbkocsma.hu/helyszin',
+      email_contact_label: 'Válasz email',
+      email_contact_placeholder: 'info@helyszin.hu',
+      save: 'Elérhetőség mentése',
+      saving: 'Mentés…',
+    },
+    customer_detail: {
+      back_to_customers: 'Vissza a vendégekhez',
+      stat_total: 'Összes foglalás',
+      stat_completed: 'Teljesített',
+      stat_cancelled: 'Lemondott',
+      stat_total_guests: 'Összes vendég',
+      reservation_history: 'Foglalási előzmények',
+      no_reservations: 'Még nincs foglalás.',
     },
     venue_settings: {
       loading: 'Beállítások betöltése…',
@@ -1138,17 +1335,39 @@ export const translations = {
       last_visit: 'Utolsó látogatás',
       no_match: 'Nincs találat a keresésre.',
       no_customers: 'Még nincs vendég.',
+      customer_one: 'vendég',
+      customer_other: 'vendég',
     },
     overview: {
-      todays_reservations: 'Mai foglalások',
-      todays_reservations_sub: 'Mára ütemezett',
+      todays_reservations: 'Ma',
+      todays_reservations_sub: 'Minden mai foglalás',
       confirmed_today: 'Ma megerősített',
-      confirmed_today_sub: 'Kész fogadni',
-      manual_review: 'Kézi feldolgozási sor',
+      confirmed_today_sub: 'Vendég várása',
+      of_todays: 'a mai foglalásokból',
+      vs_yesterday: 'tegnaphoz képest',
+      tomorrow_outlook: 'Holnap',
+      tomorrow_outlook_sub: 'Már lefoglalt',
+      upcoming_guests: 'Várt vendégek',
+      upcoming_guests_sub: 'Megerősített + sor, köv. 14 nap',
+      manual_review: 'Kézi feldolgozás',
       needs_attention: 'Figyelmet igényel',
-      queue_clear: 'Sor üres',
+      queue_clear: 'A sor üres',
       completion_rate: 'Teljesítési arány',
       completion_rate_sub: 'Utóbbi 7 nap',
+      today_hours_title: 'Mai óránkénti eloszlás',
+      today_hours_empty_title: 'Nincs mai foglalás',
+      today_hours_empty_hint: 'Az új foglalások itt fognak megjelenni.',
+      reservation_one: 'foglalás',
+      reservation_other: 'foglalás',
+      guests_label: 'fő',
+      upcoming_week_title: 'Következő 7 nap',
+      upcoming_week_subtitle: 'A naptárban már szereplő foglalások.',
+      peak: 'Csúcs',
+      recent_activity_title: 'Legutóbbi aktivitás',
+      recent_activity_subtitle: 'Az összes helyszín legújabb foglalásai.',
+      recent_activity_empty: 'Még nincs aktivitás',
+      recent_activity_empty_hint: 'Az új foglalások itt fognak megjelenni.',
+      see_all: 'Mind',
     },
     timeline: {
       today: 'Ma',
@@ -1163,8 +1382,8 @@ export const translations = {
     },
     dashboard: {
       title: 'Áttekintés',
-      subtitle: 'Mai élő pillanatkép — foglalások, sor állapota és 7 napos teljesítési arány',
-      quick_links: 'Gyors hivatkozások',
+      subtitle: 'Élő pillanatkép a mai napról, az előjegyzésekről és a figyelmet igénylő tételekről.',
+      quick_links: 'Ugrás',
       all_reservations: 'Összes foglalás',
       manual_review_queue: 'Kézi feldolgozási sor',
       customer_profiles: 'Vendégprofilok',
@@ -1203,8 +1422,12 @@ export const translations = {
       range_7d: 'Utóbbi 7 nap',
       range_30d: 'Utóbbi 30 nap',
       range_90d: 'Utóbbi 90 nap',
-      range_upcoming: 'Következő 30 nap',
-      range_around: 'Múlt + jövő',
+      range_upcoming: 'Előre lefoglalt (30 nap)',
+      range_around: 'Utolsó 7 nap + 23 nap előre',
+      empty_title: 'Nincs adat ebben az időszakban',
+      empty_description: 'A kiválasztott időszakra nem találtunk foglalást. Próbálj szélesebb dátumtartományt, vagy nézd meg a foglalások listáját közvetlenül.',
+      empty_try_90d: 'Utóbbi 90 nap',
+      empty_browse_reservations: 'Foglalások megtekintése',
     },
     stats_charts: {
       completion_rate: 'Teljesítési arány',
@@ -1359,3 +1582,20 @@ export const translations = {
 } as const
 
 export type T = typeof translations.en
+
+// Drift guard: HU must have the same key shape as EN.  Because the
+// literals differ (`'Email'` vs `'Email'` happens by chance, but
+// `'Log in'` vs `'Belépés'` does not), we widen string leaves to
+// `string` before asserting structural compatibility.
+type Widened<X> = {
+  [K in keyof X]: X[K] extends string
+    ? string
+    : X[K] extends Record<string, unknown>
+      ? Widened<X[K]>
+      : X[K]
+}
+type EnShape = Widened<typeof translations.en>
+// If a translator removes or renames a key in HU, this assignment fails
+// to type-check at build time.  No runtime cost.
+const _huCoverageCheck: EnShape = translations.hu
+void _huCoverageCheck

@@ -3,6 +3,7 @@ import { render } from '@react-email/render'
 import { resend, buildFromHeader } from './client'
 import { ReservationEmail, VenueBranding } from './ReservationEmail'
 import { formatDateYYYYMMDD, formatTimeRange } from '@/lib/datetime/businessTime'
+import { redactEmail } from '@/lib/log/redact'
 
 export type { VenueBranding }
 
@@ -57,7 +58,7 @@ export async function sendConfirmationEmail(data: ConfirmationEmailData): Promis
       html,
       ...(venue.emailContact ? { reply_to: venue.emailContact } : {}),
     })
-    console.log(`[email] Confirmation sent to ${to} (reservation #${reservationId})`)
+    console.log(`[email] Confirmation sent to ${redactEmail(to)} (reservation #${reservationId})`)
     return true
   } catch (err) {
     console.error('[email] Failed to send confirmation:', err)
@@ -107,7 +108,7 @@ export async function sendReceivedEmail(data: ReceivedEmailData): Promise<boolea
       html,
       ...(venue.emailContact ? { reply_to: venue.emailContact } : {}),
     })
-    console.log(`[email] Received email sent to ${to} (reservation #${reservationId})`)
+    console.log(`[email] Received email sent to ${redactEmail(to)} (reservation #${reservationId})`)
     return true
   } catch (err) {
     console.error('[email] Failed to send received email:', err)

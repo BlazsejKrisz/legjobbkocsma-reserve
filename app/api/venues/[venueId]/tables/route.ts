@@ -2,6 +2,7 @@ import { ok, err, safeJson, dbErr } from '@/lib/api/http'
 import { requireVenueAccess, requireSuperAdmin, requireSupportOrAbove } from '@/lib/api/authz'
 import { createClient } from '@/lib/supabase/server'
 import { UpsertTableSchema } from '@/lib/validators/tables'
+import { invalidate } from '@/lib/data/invalidate'
 
 type Params = { params: Promise<{ venueId: string }> }
 
@@ -19,6 +20,7 @@ export async function DELETE(_req: Request, { params }: Params) {
     .eq('blend_group', 'main')
 
   if (error) return dbErr(error)
+  invalidate.venueTables(venueId)
   return ok({ success: true })
 }
 
@@ -68,5 +70,6 @@ export async function POST(req: Request, { params }: Params) {
     .single()
 
   if (error) return dbErr(error)
+  invalidate.venueTables(venueId)
   return ok({ data }, { status: 201 })
 }

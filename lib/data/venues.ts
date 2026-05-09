@@ -1,32 +1,56 @@
+import { cacheLife, cacheTag } from 'next/cache'
 import { createAdminClient, createClient } from '@/lib/supabase/server'
 import type { Venue, VenueSettings, VenueOpenHours, VenueIntegration, Weekday } from '@/lib/types/venue'
 import type { UserSession } from '@/lib/auth/getSession'
 import type { OutboxEvent, OutboxProviderSummary } from '@/lib/types/outbox'
+import { tags } from './cacheTags'
 
 const NUM_TO_WEEKDAY: Record<number, Weekday> = {
   1: 'monday', 2: 'tuesday', 3: 'wednesday', 4: 'thursday',
   5: 'friday', 6: 'saturday', 7: 'sunday',
 }
 
-export async function listVenues(session: UserSession): Promise<Venue[]> {
-  const supabase = await createClient()
+// ─── Cache discipline ──────────────────────────────────────────────────
+// Cached fetchers MUST NOT read cookies/auth — Next 16 cacheComponents
+// forbids it inside 'use cache' boundaries.  Every cached function uses
+// the admin client, which means it bypasses RLS — that's intentional:
+// the cached row set is the same regardless of caller, and we filter
+// in memory afterwards via session.venueIds when needed.
+// Mutation handlers call `revalidateTag(...)` to invalidate.
 
-  let query = supabase
+// Returns ALL active+inactive venues from the row table.  Page-level
+// callers should pass the result through `filterVenuesForSession` if
+// they need to enforce venue_staff scoping.
+async function _listAllVenuesCached(): Promise<Venue[]> {
+  'use cache'
+  cacheLife('minutes')
+  cacheTag(tags.venues.all())
+  const supabase = createAdminClient()
+  const { data, error } = await supabase
     .from('venues')
     .select('id, name, slug, is_active, created_at')
     .order('name')
-
-  if (session.isVenueStaff && session.venueIds.length > 0) {
-    query = query.in('id', session.venueIds)
-  }
-
-  const { data, error } = await query
   if (error) throw new Error(error.message)
   return (data ?? []) as Venue[]
 }
 
+function filterVenuesForSession(venues: Venue[], session: UserSession): Venue[] {
+  if (!session.isVenueStaff) return venues
+  if (session.venueIds.length === 0) return []
+  const allowed = new Set(session.venueIds.map(String))
+  return venues.filter((v) => allowed.has(String(v.id)))
+}
+
+export async function listVenues(session: UserSession): Promise<Venue[]> {
+  const all = await _listAllVenuesCached()
+  return filterVenuesForSession(all, session)
+}
+
 export async function getVenue(id: string): Promise<Venue | null> {
-  const supabase = await createClient()
+  'use cache'
+  cacheLife('minutes')
+  cacheTag(tags.venues.one(id))
+  const supabase = createAdminClient()
   const { data, error } = await supabase
     .from('venues')
     .select('id, name, slug, is_active, created_at')
@@ -41,7 +65,10 @@ export async function getVenue(id: string): Promise<Venue | null> {
 }
 
 export async function getVenueSettings(venueId: string): Promise<VenueSettings | null> {
-  const supabase = await createClient()
+  'use cache'
+  cacheLife('minutes')
+  cacheTag(tags.venues.settings(venueId))
+  const supabase = createAdminClient()
   const { data, error } = await supabase
     .from('venue_settings')
     .select('*')
@@ -56,7 +83,10 @@ export async function getVenueSettings(venueId: string): Promise<VenueSettings |
 }
 
 export async function getVenueOpenHours(venueId: string): Promise<VenueOpenHours[]> {
-  const supabase = await createClient()
+  'use cache'
+  cacheLife('minutes')
+  cacheTag(tags.venues.openHours(venueId))
+  const supabase = createAdminClient()
   const { data, error } = await supabase
     .from('venue_open_hours')
     .select('*')
@@ -78,7 +108,10 @@ export async function getVenueOpenHours(venueId: string): Promise<VenueOpenHours
 }
 
 export async function getVenueIntegrations(venueId: string): Promise<VenueIntegration[]> {
-  const supabase = await createClient()
+  'use cache'
+  cacheLife('minutes')
+  cacheTag(tags.venues.integrations(venueId))
+  const supabase = createAdminClient()
   const { data, error } = await supabase
     .from('venue_integrations')
     .select('*')
@@ -97,6 +130,9 @@ type OutboxSummaryRow = {
   oldest_created_at: string | null
 }
 
+// Outbox summary is intentionally NOT cached — it's volatile (cron drains
+// it every minute, retry buttons mutate it ad-hoc) and the UI uses it
+// for live ops monitoring.  Caching even briefly would mask drain delays.
 export async function getOutboxSummary(venueId: string): Promise<OutboxProviderSummary[]> {
   const supabase = createAdminClient()
   const { data, error } = await supabase.rpc('get_outbox_summary', {
@@ -124,6 +160,8 @@ export async function getOutboxSummary(venueId: string): Promise<OutboxProviderS
   return Array.from(byProvider.values())
 }
 
+// Failed events are also not cached — staff retry from this exact list
+// and need to see the result of their action without a stale cache.
 export async function getFailedOutboxEvents(
   venueId: string,
   provider: string,

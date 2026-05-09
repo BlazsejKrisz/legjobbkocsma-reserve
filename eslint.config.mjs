@@ -10,6 +10,18 @@ const compat = new FlatCompat({
 });
 
 const eslintConfig = [
+  // Ignore the Next.js dev build output and other generated/vendor
+  // directories — without this, `eslint .` lints turbopack chunks
+  // and produces tens of thousands of irrelevant errors.
+  {
+    ignores: [
+      ".next/**",
+      "node_modules/**",
+      "out/**",
+      "build/**",
+      "next-env.d.ts",
+    ],
+  },
   ...compat.extends("next/core-web-vitals", "next/typescript"),
 ];
 

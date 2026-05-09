@@ -3,6 +3,7 @@ import { getSession, canAccessVenue } from '@/lib/auth/getSession'
 import { getVenue } from '@/lib/data/venues'
 import { listTableTypesByVenue } from '@/lib/data/tables'
 import { ReservationsList } from '@/components/reservations/ReservationsList'
+import { PageHeader } from '@/components/layout/PageHeader'
 
 type Params = { params: Promise<{ venueId: string }> }
 
@@ -16,11 +17,12 @@ export default async function VenueReservationsPage({ params }: Params) {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight">{venue.name}</h1>
-        <p className="mt-0.5 text-xs font-mono text-muted-foreground">{venue.slug}</p>
-      </div>
-
+      <PageHeader
+        title={venue.name}
+        subtitle={venue.slug}
+        backHref={`/dashboard/venues/${venueId}`}
+        backLabel={venue.name}
+      />
       <ReservationsList
         venues={[venue]}
         tableTypes={tableTypes}

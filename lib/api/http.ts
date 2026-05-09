@@ -43,8 +43,15 @@ const DB_STATUS: Record<string, number> = {
   "42501": 403,  // insufficient_privilege
 }
 
+// Generic, schema-leak-free messages for the codes we map.  Any code we
+// don't have an explicit message for falls back to `Database error` —
+// never the raw `error.message` which can leak column names, partial
+// values, constraint identifiers (think `customers_email_key` confirming
+// an email exists), and other internals useful for crafting attacks.
 const DB_MESSAGE: Record<string, string> = {
   PGRST116: "Not found",
+  "23505":  "Conflict",
+  "23503":  "Conflict",
   "23P01":  "Time slot is already occupied",
   "42501":  "Forbidden",
 }
@@ -54,7 +61,8 @@ const DB_MESSAGE: Record<string, string> = {
  * details) and returns the appropriate HTTP response.
  *
  * Only server errors (status >= 500) are logged — 404s and 409s are expected
- * client-side conditions, not bugs.
+ * client-side conditions, not bugs.  Client-bound responses use a generic
+ * mapped message; the raw error.message is never shipped to the client.
  *
  * @param error  Supabase error object returned from a query or RPC call
  * @param ctx    Short label shown in the log line, e.g. 'create_reservation_auto'
@@ -62,18 +70,22 @@ const DB_MESSAGE: Record<string, string> = {
 export function dbErr(error: DbError, ctx?: string): ReturnType<typeof err> {
   const status = DB_STATUS[error.code ?? ""] ?? 500
 
-  if (status >= 500) {
-    console.error(
-      `[DB${ctx ? ` · ${ctx}` : ""}]`,
-      JSON.stringify({
-        message: error.message,
-        code: error.code ?? null,
-        hint: error.hint ?? null,
-        details: error.details ?? null,
-      }),
-    )
-  }
+  // Always log full context for forensics — only 4xx codes are suppressed
+  // in client responses, not in our internal logs.
+  const logFn = status >= 500 ? console.error : console.warn
+  logFn(
+    `[DB${ctx ? ` · ${ctx}` : ""}]`,
+    JSON.stringify({
+      status,
+      message: error.message,
+      code: error.code ?? null,
+      hint: error.hint ?? null,
+      details: error.details ?? null,
+    }),
+  )
 
-  const message = DB_MESSAGE[error.code ?? ""] ?? error.message
+  const message =
+    DB_MESSAGE[error.code ?? ""] ??
+    (status >= 500 ? "Database error" : "Request failed")
   return err(message, { status })
 }

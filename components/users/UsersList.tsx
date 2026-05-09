@@ -19,7 +19,7 @@ import { useT } from '@/lib/i18n/useT'
 
 const ROLE_BADGE_CLASSES: Record<AppRole, string> = {
   super_admin: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
-  support: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
+  support: 'bg-info/15 text-info border-info/30',
   venue_staff: 'bg-zinc-500/15 text-zinc-400 border-zinc-500/30',
 }
 
@@ -108,7 +108,7 @@ export function UsersList() {
                     )}
                   </TableCell>
                   <TableCell>
-                    <span className={`text-xs ${user.is_active ? 'text-emerald-400' : 'text-zinc-500'}`}>
+                    <span className={`text-xs ${user.is_active ? 'text-success' : 'text-zinc-500'}`}>
                       {user.is_active ? t.users.active : t.users.inactive}
                     </span>
                   </TableCell>

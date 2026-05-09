@@ -1,7 +1,9 @@
 import { ok, err } from '@/lib/api/http'
+import { checkCronAuth } from '@/lib/api/cronAuth'
 import { createAdminClient } from '@/lib/supabase/server'
 import { enqueueNotification } from '@/lib/notifications/enqueue'
 import { drainDue } from '@/lib/notifications/drain'
+import { redactEmail, redactPhone } from '@/lib/log/redact'
 
 // T-2h reminder cron.
 //
@@ -41,10 +43,8 @@ type ReservationRow = {
 }
 
 export async function GET(req: Request) {
-  const auth = req.headers.get('authorization')
-  if (auth !== `Bearer ${process.env.CRON_SECRET}`) {
-    return err('Unauthorized', { status: 401 })
-  }
+  const cronErr = checkCronAuth(req)
+  if (cronErr) return cronErr
 
   const supabase = createAdminClient()
 
@@ -54,32 +54,44 @@ export async function GET(req: Request) {
   const lo = new Date(now + 1.5 * 60 * 60 * 1000).toISOString()
   const hi = new Date(now + 2.5 * 60 * 60 * 1000).toISOString()
 
+  // Atomic claim: stamp reminder_sent_at AND return the rows in one
+  // statement.  If two cron instances overlap (cold start, slow drain,
+  // accidental double-schedule), only one wins each row — the other gets
+  // an empty result.  Without this, both sides would pass the
+  // `is(null)` filter and both would enqueue a reminder.
+  const claimedAt = new Date().toISOString()
   const { data, error } = await supabase
     .from('reservations')
-    .select(`
-      id, starts_at, ends_at, party_size, notification_channel,
-      customer:customer_id (full_name, email, phone),
-      venue:assigned_venue_id (id, name, logo_url, address, phone, website, email_contact)
-    `)
+    .update({ reminder_sent_at: claimedAt })
     .eq('status', 'confirmed')
     .not('notification_channel', 'is', null)
     .is('reminder_sent_at', null)
     .gte('starts_at', lo)
     .lte('starts_at', hi)
+    .select(`
+      id, starts_at, ends_at, party_size, notification_channel,
+      customer:customer_id (full_name, email, phone),
+      venue:assigned_venue_id (id, name, logo_url, address, phone, website, email_contact)
+    `)
     .limit(200)
 
   if (error) {
-    console.error('[cron/reminders] select failed:', error.message)
-    return err('select failed', { status: 500 })
+    console.error('[cron/reminders] claim failed:', error.message)
+    return err('claim failed', { status: 500 })
   }
 
   const rows = (data ?? []) as unknown as ReservationRow[]
   let queued = 0
   let skipped = 0
+  // Reservation IDs whose claim we want to roll back because we couldn't
+  // enqueue (e.g. missing channel / venue / contact info, or enqueue
+  // throw).  Without rollback, the row would never be retried.
+  const releaseIds: number[] = []
 
   for (const r of rows) {
     if (!r.notification_channel || !r.venue) {
       skipped++
+      releaseIds.push(r.id)
       continue
     }
 
@@ -87,7 +99,10 @@ export async function GET(req: Request) {
       r.notification_channel === 'email' ? r.customer?.email : r.customer?.phone
     if (!toAddress) {
       // Channel was set but contact info has been removed — defensive skip.
+      // Release the claim so a future tick can retry once contact info is
+      // restored (otherwise the row is stuck "reminded" forever).
       skipped++
+      releaseIds.push(r.id)
       continue
     }
 
@@ -116,16 +131,27 @@ export async function GET(req: Request) {
         },
       })
 
-      // Stamp synchronously so a re-run of this cron during overlap (e.g.
-      // a slow drain) doesn't enqueue a second reminder.
-      await supabase
-        .from('reservations')
-        .update({ reminder_sent_at: new Date().toISOString() })
-        .eq('id', r.id)
-
+      // Claim already stamped — no second update needed.
       queued++
     } catch (e) {
-      console.error(`[cron/reminders] enqueue failed for reservation ${r.id}:`, e)
+      const recipient = r.notification_channel === 'email'
+        ? redactEmail(r.customer?.email)
+        : redactPhone(r.customer?.phone)
+      const msg = e instanceof Error ? e.message : String(e)
+      console.error(`[cron/reminders] enqueue failed for reservation ${r.id} (to=${recipient}): ${msg}`)
+      // Roll back the claim so the next tick can retry.
+      releaseIds.push(r.id)
+    }
+  }
+
+  if (releaseIds.length > 0) {
+    const { error: releaseErr } = await supabase
+      .from('reservations')
+      .update({ reminder_sent_at: null })
+      .in('id', releaseIds)
+      .eq('reminder_sent_at', claimedAt) // only undo our own claim
+    if (releaseErr) {
+      console.error('[cron/reminders] release failed:', releaseErr.message)
     }
   }
 

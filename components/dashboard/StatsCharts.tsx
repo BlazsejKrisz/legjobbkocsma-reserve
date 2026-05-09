@@ -51,7 +51,23 @@ type Props = {
   completionRate: number
 }
 
-const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#14b8a6']
+// Chart palette — sourced from the CSS variables defined in
+// app/globals.css (--chart-1..5).  This way dark/light theme switches
+// repaint the charts automatically and a brand colour change is one
+// CSS variable, not seven hex literals.
+//
+// Recharts can't read computed CSS values directly when the components
+// render server-side, so we use the `hsl(var(--chart-N))` form which
+// is resolved at render-time on the client.  The PIE_COLORS array
+// keeps the same length / order so existing index access still works.
+const COLORS = [
+  'hsl(var(--chart-1))',
+  'hsl(var(--chart-2))',
+  'hsl(var(--chart-3))',
+  'hsl(var(--chart-4))',
+  'hsl(var(--chart-5))',
+  'hsl(var(--primary))',
+]
 
 // ─── Building blocks ───────────────────────────────────────────────────────────
 
@@ -86,22 +102,30 @@ function EmptyChart({ message }: { message: string }) {
 
 function CompletionGauge({ rate, subtitle }: { rate: number; subtitle: string }) {
   const clamped = Math.min(100, Math.max(0, rate))
-  const color = clamped >= 70 ? '#10b981' : clamped >= 40 ? '#f59e0b' : '#ef4444'
+  // Tone matches semantic CSS vars; threshold-driven coloring.  Using
+  // CSS vars means dark/light mode + brand changes propagate without
+  // touching this component.
+  const stroke =
+    clamped >= 70
+      ? 'hsl(var(--success))'
+      : clamped >= 40
+        ? 'hsl(var(--warning))'
+        : 'hsl(var(--destructive))'
   return (
     <div className="flex flex-col items-center justify-center gap-2 py-3">
       <div className="relative flex h-28 w-28 items-center justify-center">
         <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 100 100">
-          <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" strokeWidth="12" className="text-muted/30" />
+          <circle cx="50" cy="50" r="40" fill="none" stroke="hsl(var(--muted))" strokeWidth="12" opacity="0.4" />
           <circle
             cx="50" cy="50" r="40"
             fill="none"
-            stroke={color}
+            stroke={stroke}
             strokeWidth="12"
             strokeDasharray={`${(clamped / 100) * 251.2} 251.2`}
             strokeLinecap="round"
           />
         </svg>
-        <span className="text-2xl font-bold tabular-nums" style={{ color }}>{clamped}%</span>
+        <span className="text-2xl font-bold tabular-nums" style={{ color: stroke }}>{clamped}%</span>
       </div>
       <p className="text-xs text-muted-foreground">{subtitle}</p>
     </div>
@@ -230,7 +254,7 @@ export function StatsCharts({ daily, sources, venues, dow, hod, leadTime, comple
                   width={90}
                 />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="value" name={t.stats_charts.reservations_label} fill="#8b5cf6" radius={[0, 2, 2, 0]} />
+                <Bar dataKey="value" name={t.stats_charts.reservations_label} fill="hsl(var(--chart-4))" radius={[0, 2, 2, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -249,8 +273,8 @@ export function StatsCharts({ daily, sources, venues, dow, hod, leadTime, comple
                 <XAxis dataKey="label" tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} tickLine={false} axisLine={false} />
                 <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} tickLine={false} axisLine={false} allowDecimals={false} />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="total" name={t.stats_charts.reservations_label} fill="#6366f1" radius={[3, 3, 0, 0]} />
-                <Bar dataKey="guests" name={t.stats_charts.guests} fill="#8b5cf6" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="total" name={t.stats_charts.reservations_label} fill="hsl(var(--chart-1))" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="guests" name={t.stats_charts.guests} fill="hsl(var(--chart-4))" radius={[3, 3, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -272,7 +296,7 @@ export function StatsCharts({ daily, sources, venues, dow, hod, leadTime, comple
                 />
                 <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} tickLine={false} axisLine={false} allowDecimals={false} />
                 <Tooltip content={<CustomTooltip />} />
-                <Bar dataKey="total" name={t.stats_charts.reservations_label} fill="#10b981" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="total" name={t.stats_charts.reservations_label} fill="hsl(var(--success))" radius={[3, 3, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -302,10 +326,10 @@ export function StatsCharts({ daily, sources, venues, dow, hod, leadTime, comple
               />
               <Tooltip content={<CustomTooltip />} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
-              <Bar dataKey="total" name={t.stats_charts.total} fill="#6366f1" radius={[2, 2, 0, 0]} />
-              <Bar dataKey="confirmed" name={t.stats_charts.confirmed} fill="#10b981" radius={[2, 2, 0, 0]} />
-              <Bar dataKey="cancelled" name={t.stats_charts.cancelled} fill="#ef4444" radius={[2, 2, 0, 0]} />
-              <Bar dataKey="overflow" name={t.stats_charts.overflow} fill="#f59e0b" radius={[2, 2, 0, 0]} />
+              <Bar dataKey="total" name={t.stats_charts.total} fill="hsl(var(--chart-1))" radius={[2, 2, 0, 0]} />
+              <Bar dataKey="confirmed" name={t.stats_charts.confirmed} fill="hsl(var(--success))" radius={[2, 2, 0, 0]} />
+              <Bar dataKey="cancelled" name={t.stats_charts.cancelled} fill="hsl(var(--destructive))" radius={[2, 2, 0, 0]} />
+              <Bar dataKey="overflow" name={t.stats_charts.overflow} fill="hsl(var(--warning))" radius={[2, 2, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         )}
@@ -327,7 +351,7 @@ export function StatsCharts({ daily, sources, venues, dow, hod, leadTime, comple
               />
               <YAxis tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }} tickLine={false} axisLine={false} allowDecimals={false} />
               <Tooltip content={<CustomTooltip />} />
-              <Bar dataKey="total_guests" name={t.stats_charts.guests} fill="#8b5cf6" radius={[2, 2, 0, 0]} />
+              <Bar dataKey="total_guests" name={t.stats_charts.guests} fill="hsl(var(--chart-4))" radius={[2, 2, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         )}
@@ -349,9 +373,9 @@ export function StatsCharts({ daily, sources, venues, dow, hod, leadTime, comple
               />
               <Tooltip content={<CustomTooltip />} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
-              <Bar dataKey="total" name={t.stats_charts.total} fill="#6366f1" radius={[0, 2, 2, 0]} />
-              <Bar dataKey="confirmed" name={t.stats_charts.confirmed} fill="#10b981" radius={[0, 2, 2, 0]} />
-              <Bar dataKey="guests" name={t.stats_charts.guests} fill="#8b5cf6" radius={[0, 2, 2, 0]} />
+              <Bar dataKey="total" name={t.stats_charts.total} fill="hsl(var(--chart-1))" radius={[0, 2, 2, 0]} />
+              <Bar dataKey="confirmed" name={t.stats_charts.confirmed} fill="hsl(var(--success))" radius={[0, 2, 2, 0]} />
+              <Bar dataKey="guests" name={t.stats_charts.guests} fill="hsl(var(--chart-4))" radius={[0, 2, 2, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </ChartCard>

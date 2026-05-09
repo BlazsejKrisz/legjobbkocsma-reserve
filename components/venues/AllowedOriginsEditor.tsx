@@ -8,10 +8,12 @@ import { Input } from '@/components/ui/input'
 import { qk } from '@/lib/query/keys'
 import { apiFetch } from '@/lib/types/api'
 import { useUpdateVenueOrigins } from '@/lib/hooks/venues/useVenues'
+import { useT } from '@/lib/i18n/useT'
 
 type VenueWithOrigins = { id: string; allowed_origins: string[] }
 
 export function AllowedOriginsEditor({ venueId }: { venueId: string }) {
+  const t = useT()
   const [draft, setDraft] = useState('')
   const [error, setError] = useState('')
 
@@ -35,11 +37,11 @@ export function AllowedOriginsEditor({ venueId }: { venueId: string }) {
   function add() {
     const trimmed = draft.trim().replace(/\/$/, '')
     if (!isValidOrigin(trimmed)) {
-      setError('Érvényes origin szükséges, pl. https://legjobbkocsma.hu')
+      setError(t.allowed_origins.error_invalid)
       return
     }
     if (origins.includes(trimmed)) {
-      setError('Ez az origin már szerepel a listában')
+      setError(t.allowed_origins.error_duplicate)
       return
     }
     setError('')
@@ -56,10 +58,11 @@ export function AllowedOriginsEditor({ venueId }: { venueId: string }) {
     <div className="space-y-3">
       <div className="space-y-1.5">
         <h3 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-          Engedélyezett originek (CORS whitelist)
+          {t.allowed_origins.title}
         </h3>
         <p className="text-xs text-muted-foreground">
-          Ha üres, minden origin engedélyezett. Adj meg teljes origint: <code className="text-[11px] bg-muted px-1 py-0.5 rounded">https://example.com</code>
+          {t.allowed_origins.description}{' '}
+          <code className="text-[11px] bg-muted px-1 py-0.5 rounded">https://example.com</code>
         </p>
       </div>
 
@@ -72,6 +75,7 @@ export function AllowedOriginsEditor({ venueId }: { venueId: string }) {
                 onClick={() => remove(origin)}
                 disabled={update.isPending}
                 className="text-muted-foreground hover:text-destructive transition-colors"
+                aria-label={`Remove ${origin}`}
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -79,7 +83,9 @@ export function AllowedOriginsEditor({ venueId }: { venueId: string }) {
           ))}
         </ul>
       ) : (
-        <p className="text-xs text-muted-foreground/60 italic">Nincs megadva — minden origin engedélyezett</p>
+        <p className="text-xs text-muted-foreground/60 italic">
+          {t.allowed_origins.empty_state}
+        </p>
       )}
 
       <div className="flex gap-2">
@@ -88,14 +94,14 @@ export function AllowedOriginsEditor({ venueId }: { venueId: string }) {
             value={draft}
             onChange={(e) => { setDraft(e.target.value); setError('') }}
             onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), add())}
-            placeholder="https://pelda.hu"
+            placeholder={t.allowed_origins.input_placeholder}
             className="h-8 text-sm font-mono"
           />
           {error && <p className="text-[11px] text-destructive">{error}</p>}
         </div>
-        <Button size="sm" variant="outline" onClick={add} disabled={update.isPending || !draft.trim()} className="h-8 shrink-0">
-          <Plus className="h-3.5 w-3.5 mr-1" />
-          Hozzáadás
+        <Button size="sm" variant="outline" onClick={add} disabled={update.isPending || !draft.trim()} className="shrink-0">
+          <Plus />
+          {t.allowed_origins.add}
         </Button>
       </div>
     </div>

@@ -123,4 +123,6 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
 ]
 
-export const LATEST_VERSION = CHANGELOG[0].version
+// CHANGELOG is hand-maintained and always non-empty; the optional
+// chain placates `noUncheckedIndexedAccess` while keeping intent clear.
+export const LATEST_VERSION = CHANGELOG[0]?.version ?? '0.0.0'

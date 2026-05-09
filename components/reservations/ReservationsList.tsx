@@ -100,7 +100,8 @@ export function ReservationsList({
       {/* Count */}
       {!isLoading && (
         <p className="text-xs text-muted-foreground">
-          {total.toLocaleString()} reservation{total !== 1 ? 's' : ''}
+          {(total === 1 ? t.reservations_list.count_label_one : t.reservations_list.count_label_other)
+            .replace('{count}', total.toLocaleString())}
         </p>
       )}
 
@@ -178,7 +179,7 @@ export function ReservationsList({
                         title={`${t.reservations_list.has_message}: ${r.special_requests}`}
                         className="inline-flex shrink-0"
                       >
-                        <MessageSquare className="h-3 w-3 text-blue-400" strokeWidth={2.5} />
+                        <MessageSquare className="h-3 w-3 text-info" strokeWidth={2.5} />
                       </span>
                     )}
                   </span>

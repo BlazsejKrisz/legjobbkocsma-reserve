@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { ChevronLeft, ChevronRight, MoonStar } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -37,7 +37,9 @@ const JS_DAY_TO_WEEKDAY: Weekday[] = [
 ]
 
 function getWeekdayForDate(dateYYYYMMDD: string): Weekday {
-  return JS_DAY_TO_WEEKDAY[new Date(dateYYYYMMDD + 'T12:00:00').getDay()]
+  // getDay() returns 0–6 so the index always lands.  Falling back to
+  // 'monday' is purely a defensive default for the type checker.
+  return JS_DAY_TO_WEEKDAY[new Date(dateYYYYMMDD + 'T12:00:00').getDay()] ?? 'monday'
 }
 
 function getWindowForDate(
@@ -55,11 +57,11 @@ function getWindowForDate(
 
 // ─── Block colours ────────────────────────────────────────────────────────────
 const BLOCK_BG: Record<string, string> = {
-  confirmed:             'bg-emerald-500/20 border-emerald-500/40 text-emerald-300',
-  pending_manual_review: 'bg-amber-500/20  border-amber-500/40  text-amber-300',
-  completed:             'bg-blue-500/20   border-blue-500/40   text-blue-300',
+  confirmed:             'bg-success/20 border-success/40 text-success',
+  pending_manual_review: 'bg-warning/20  border-warning/40  text-warning',
+  completed:             'bg-info/20   border-info/40   text-info',
   cancelled:             'bg-zinc-500/10   border-zinc-500/25   text-zinc-500',
-  no_show:               'bg-red-500/15    border-red-500/30    text-red-400',
+  no_show:               'bg-destructive/15    border-destructive/30    text-destructive',
 }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -92,7 +94,13 @@ export function TimelineView({ venueId, venues, tableTypes }: Props) {
     .filter((t) => t.is_active)
     .sort((a, b) => a.sort_order - b.sort_order)
 
-  const reservations = reservationsData?.data ?? []
+  // Stable reference across renders when the underlying data didn't
+  // change — keeps downstream useMemos from invalidating on every parent
+  // render.
+  const reservations = useMemo(
+    () => reservationsData?.data ?? [],
+    [reservationsData?.data],
+  )
 
   // Derive the window bounds from the venue's open hours for the selected weekday
   const openHours: VenueOpenHours[] = openHoursData?.data ?? []
@@ -108,19 +116,32 @@ export function TimelineView({ venueId, venues, tableTypes }: Props) {
   // minWidth keeps scroll usable on narrow screens; layout uses % so it fills wider containers
   const minWidth  = windowHrs * HOUR_WIDTH
 
-  const tableResMap = new Map<string, Reservation[]>()
-  for (const r of reservations) {
-    for (const rt of r.reservation_tables ?? []) {
-      if (!rt.released_at) {
-        const list = tableResMap.get(rt.table_id) ?? []
-        list.push(r)
-        tableResMap.set(rt.table_id, list)
+  // Memoise the (table_id → reservations) lookup so the O(n*m) scan
+  // doesn't run on every parent re-render.  Tables list rebuilds the
+  // outer JSX once per row + reservation; without this the per-render
+  // cost compounds on busy days with hundreds of reservations.
+  const tableResMap = useMemo(() => {
+    const map = new Map<string, Reservation[]>()
+    for (const r of reservations) {
+      for (const rt of r.reservation_tables ?? []) {
+        if (!rt.released_at) {
+          const list = map.get(rt.table_id) ?? []
+          list.push(r)
+          map.set(rt.table_id, list)
+        }
       }
     }
-  }
+    return map
+  }, [reservations])
 
-  // Hour tick marks — positions and labels derived from the window
-  const hourTicks = buildHourTicks(windowStart, windowEnd)
+  // Hour tick marks — positions and labels derived from the window.
+  // Memoised on instant timestamps to keep referential identity stable
+  // across re-renders that don't actually shift the window.
+  const hourTicks = useMemo(
+    () => buildHourTicks(windowStart, windowEnd),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [windowStart.getTime(), windowEnd.getTime()],
+  )
 
   // ─── Date navigation ─────────────────────────────────────────────────────
   const shiftDate = (delta: number) => {
@@ -283,9 +304,18 @@ export function TimelineView({ venueId, venues, tableTypes }: Props) {
                     return (
                       <div
                         key={table.id}
-                        className="relative border-b border-r border-border cursor-crosshair select-none"
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Click an empty slot in ${table.name} to create a reservation`}
+                        className="relative border-b border-r border-border cursor-crosshair select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset"
                         style={{ height: ROW_HEIGHT }}
                         onClick={handleEmptyClick}
+                        // Enter/Space at the row level isn't meaningful (no
+                        // x-coord), so keyboard activation falls through to
+                        // the global "new reservation" button.  Listed for
+                        // a11y completeness so screen readers announce the
+                        // role correctly.
+                        onKeyDown={() => {}}
                       >
                         {/* Hour grid lines */}
                         {hourTicks.map((tick) => {
@@ -330,8 +360,12 @@ export function TimelineView({ venueId, venues, tableTypes }: Props) {
                           return (
                             <div
                               key={r.id}
+                              role="button"
+                              tabIndex={0}
+                              aria-label={`Open reservation: ${r.customers?.full_name ?? 'Walk-in'}, ${r.party_size} guests`}
                               className={cn(
                                 'absolute inset-y-1 rounded border px-1 flex flex-col justify-center cursor-pointer transition-all min-w-[4px]',
+                                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/70 focus-visible:ring-offset-1',
                                 BLOCK_BG[r.status] ??
                                   'bg-zinc-500/15 border-zinc-500/30 text-zinc-400',
                                 isHovered && 'ring-1 ring-white/30 brightness-110',
@@ -346,6 +380,13 @@ export function TimelineView({ venueId, venues, tableTypes }: Props) {
                                 e.stopPropagation()
                                 setSelectedReservationId(r.id)
                               }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  setSelectedReservationId(r.id)
+                                }
+                              }}
                               title={[
                                 r.customers?.full_name ?? 'Walk-in',
                                 `${r.party_size} guests`,
@@ -358,7 +399,7 @@ export function TimelineView({ venueId, venues, tableTypes }: Props) {
                                   <span className="truncate">{r.customers?.full_name ?? 'Walk-in'}</span>
                                   {r.special_requests && (
                                     <span
-                                      className="inline-block h-1.5 w-1.5 rounded-full bg-blue-400 shrink-0"
+                                      className="inline-block h-1.5 w-1.5 rounded-full bg-info shrink-0"
                                       aria-label={t.reservations_list.has_message}
                                     />
                                   )}
@@ -394,10 +435,10 @@ export function TimelineView({ venueId, venues, tableTypes }: Props) {
       <div className="flex flex-wrap gap-3">
         {(
           [
-            ['confirmed',             'text-emerald-400'],
-            ['pending_manual_review', 'text-amber-400'],
-            ['completed',             'text-blue-400'],
-            ['no_show',               'text-red-400'],
+            ['confirmed',             'text-success'],
+            ['pending_manual_review', 'text-warning'],
+            ['completed',             'text-info'],
+            ['no_show',               'text-destructive'],
           ] as const
         ).map(([status, cls]) => (
           <span key={status} className={cn('text-[10px] flex items-center gap-1', cls)}>

@@ -20,10 +20,10 @@ type Props = {
 // ─── Status colour helpers ────────────────────────────────────────────────────
 
 const COUNT_CLASSES: Record<string, string> = {
-  pending: 'bg-amber-500/10 text-amber-400 border-amber-500/25',
-  delivering: 'bg-blue-500/10 text-blue-400 border-blue-500/25',
-  delivered: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25',
-  failed: 'bg-red-500/10 text-red-400 border-red-500/25',
+  pending: 'bg-warning/10 text-warning border-warning/25',
+  delivering: 'bg-info/10 text-info border-info/25',
+  delivered: 'bg-success/10 text-success border-success/25',
+  failed: 'bg-destructive/10 text-destructive border-destructive/25',
   skipped: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/25',
 }
 
@@ -63,13 +63,13 @@ function FailedEventRow({
             <span className="text-[10px] text-muted-foreground tabular-nums">
               {new Date(event.created_at).toLocaleString()}
             </span>
-            <Badge className="bg-red-500/10 text-red-400 border-red-500/25 text-[10px]">
+            <Badge className="bg-destructive/10 text-destructive border-destructive/25 text-[10px]">
               {event.attempts}/{event.max_attempts} {t.outbox.attempts}
             </Badge>
           </div>
 
           {event.last_error && (
-            <p className="mt-1 text-[11px] text-red-400 line-clamp-2">{event.last_error}</p>
+            <p className="mt-1 text-[11px] text-destructive line-clamp-2">{event.last_error}</p>
           )}
 
           {event.next_retry_at && (
@@ -243,7 +243,7 @@ export function OutboxDashboard({ venueId }: Props) {
         </div>
 
         {totalFailed > 0 && (
-          <div className="flex items-center gap-1.5 text-red-400">
+          <div className="flex items-center gap-1.5 text-destructive">
             <AlertCircle className="h-4 w-4" />
             <span className="text-xs font-medium">{totalFailed} {t.outbox.failed_count}</span>
           </div>

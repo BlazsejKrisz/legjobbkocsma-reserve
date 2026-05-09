@@ -2,6 +2,7 @@ import { ok, err, safeJson, dbErr } from '@/lib/api/http'
 import { requireSupportOrAbove } from '@/lib/api/authz'
 import { createClient } from '@/lib/supabase/server'
 import { UpsertTableTypeSchema } from '@/lib/validators/tables'
+import { invalidate } from '@/lib/data/invalidate'
 
 type Params = { params: Promise<{ venueId: string; typeId: string }> }
 
@@ -23,5 +24,6 @@ export async function PATCH(req: Request, { params }: Params) {
     .single()
 
   if (error) return dbErr(error)
+  invalidate.tableTypes()
   return ok({ data })
 }

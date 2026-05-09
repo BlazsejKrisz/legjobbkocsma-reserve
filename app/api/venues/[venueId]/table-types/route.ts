@@ -2,6 +2,7 @@ import { ok, err, safeJson, dbErr } from '@/lib/api/http'
 import { requireVenueAccess, requireSupportOrAbove } from '@/lib/api/authz'
 import { createClient } from '@/lib/supabase/server'
 import { UpsertTableTypeSchema } from '@/lib/validators/tables'
+import { invalidate } from '@/lib/data/invalidate'
 
 type Params = { params: Promise<{ venueId: string }> }
 
@@ -37,5 +38,6 @@ export async function POST(req: Request, { params }: Params) {
     .single()
 
   if (error) return dbErr(error)
+  invalidate.tableTypes()
   return ok({ data }, { status: 201 })
 }

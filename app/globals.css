@@ -29,6 +29,16 @@
     --destructive: 0 84% 52%;
     --destructive-foreground: 0 0% 100%;
 
+    /* Semantic status tokens — used by status badges, stat cards, alerts.
+       Centralizing here lets a single value flip the whole UI; previously
+       each surface hardcoded amber/emerald/red in 30+ class strings. */
+    --success: 152 65% 38%;
+    --success-foreground: 0 0% 100%;
+    --warning: 35 92% 50%;
+    --warning-foreground: 224 25% 11%;
+    --info: 217 75% 53%;
+    --info-foreground: 0 0% 100%;
+
     --border: 35 14% 81%;
     --input: 35 12% 83%;
     --ring: 24 91% 51%;
@@ -70,6 +80,15 @@
     --destructive: 0 65% 45%;
     --destructive-foreground: 0 0% 98%;
 
+    /* Dark-mode semantic status tokens — slightly desaturated, lifted in
+       luminance so they read against the deep navy/stone background. */
+    --success: 152 55% 48%;
+    --success-foreground: 0 0% 100%;
+    --warning: 35 90% 56%;
+    --warning-foreground: 224 25% 8%;
+    --info: 217 80% 62%;
+    --info-foreground: 0 0% 100%;
+
     --border: 224 14% 19%;
     --input: 224 14% 17%;
     --ring: 24 91% 51%;
@@ -89,7 +108,104 @@
   * {
     @apply border-border;
   }
+
+  /* Smooth scrolling app-wide; matches what serious SaaS dashboards
+     do for in-page anchor navigation. */
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
     @apply bg-background text-foreground;
+    /* Tight tracking + Geist's stylistic sets — moves the type away
+       from default-Tailwind into intentional-design territory. */
+    font-feature-settings: "ss01", "cv11", "ss03";
+    letter-spacing: -0.005em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Brand-tinted text selection.  Replaces the OS default blue, makes
+     the dashboard feel branded the moment a user copies a value. */
+  ::selection {
+    background-color: hsl(var(--primary) / 0.25);
+    color: hsl(var(--foreground));
+  }
+
+  /* Brand caret in inputs/textareas (mirrors Input primitive). */
+  input,
+  textarea,
+  [contenteditable="true"] {
+    caret-color: hsl(var(--primary));
+  }
+
+  /* Body-wide scrollbar refinement.  Same look as .scrollbar-thin so
+     nested scroll regions match the chrome.  Firefox uses
+     `scrollbar-width`; WebKit uses ::-webkit-scrollbar. */
+  body {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+  body::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  body::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border: 2px solid hsl(var(--background));
+    border-radius: 999px;
+  }
+  body::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.5);
+  }
+
+  /* Numerics in tables, stat cards, timeline timestamps — tabular-nums
+     keeps columns stable as values change, ditches the "different width
+     digits" jitter that's a tell-tale sign of an unedited shadcn dump. */
+  .num,
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Distinctive page heading: tight kerning + a subtle uppercase
+     eyebrow above the H1 (when present via the .eyebrow companion).
+     Apply via `<h1 class="page-title">` in the dashboard.  Bumped from
+     text-base to text-xl on desktop for proper page-level hierarchy. */
+  h1.page-title {
+    @apply text-xl font-semibold tracking-tight text-foreground;
+    letter-spacing: -0.02em;
+  }
+  .eyebrow {
+    @apply text-[11px] font-semibold uppercase tracking-[0.1em] text-muted-foreground;
+  }
+
+  /* Refined kbd glyphs for keyboard hints in tooltips / menus. */
+  kbd {
+    @apply inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded
+           border border-border/80 bg-muted/60 px-1
+           font-mono text-[10px] font-semibold text-muted-foreground;
+    box-shadow: inset 0 -1px 0 hsl(var(--border));
+  }
+}
+
+/* Custom thin scrollbar — replaces the chunky default in scrollable
+   tables, drawers, dialogs.  Keeps macOS overlay-style behavior on
+   trackpads. */
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 999px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.4);
   }
 }

@@ -1,10 +1,8 @@
 import { redirect, notFound } from 'next/navigation'
-import Link from 'next/link'
-import { ChevronLeft } from 'lucide-react'
 import { getSession } from '@/lib/auth/getSession'
 import { getVenue } from '@/lib/data/venues'
-import { Button } from '@/components/ui/button'
 import { TableTypesList } from '@/components/tables/TableTypesList'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { getServerT } from '@/lib/i18n/serverT'
 
 type Params = { params: Promise<{ venueId: string }> }
@@ -18,21 +16,13 @@ export default async function TableTypesPage({ params }: Params) {
   if (!venue) notFound()
 
   return (
-    <div className="flex flex-col gap-5 max-w-2xl">
-      <div className="flex items-center gap-2">
-        <Button variant="ghost" size="sm" className="h-7" asChild>
-          <Link href={`/dashboard/venues/${venueId}/tables`}>
-            <ChevronLeft className="h-3.5 w-3.5" />
-            {t.table_types.back_to_tables}
-          </Link>
-        </Button>
-      </div>
-
-      <div>
-        <h1 className="text-lg font-semibold">{t.table_types.title}</h1>
-        <p className="text-sm text-muted-foreground">{venue.name}</p>
-      </div>
-
+    <div className="flex flex-col gap-6 max-w-2xl">
+      <PageHeader
+        title={t.table_types.title}
+        subtitle={venue.name}
+        backHref={`/dashboard/venues/${venueId}/tables`}
+        backLabel={t.table_types.back_to_tables}
+      />
       <TableTypesList venueId={venueId} />
     </div>
   )

@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto'
 import { err } from './http'
 
 const MAX_WINDOW_HOURS = 18   // hard cap on availability scan range
@@ -13,13 +14,19 @@ const MAX_PARTY_SIZE   = 500  // absolute ceiling regardless of venue settings
  * Set this on your WordPress site's server-side config (not in browser JS).
  * If the env var is not set the check is skipped — useful during development
  * or when the form runs fully server-side (PHP) where the key is never exposed.
+ *
+ * Comparison is constant-time (timingSafeEqual) to prevent network-timing
+ * key recovery; combined with the unbounded retries on the partner endpoint
+ * a non-constant-time `===` is a real side channel.
  */
 export function checkApiKey(req: Request): ReturnType<typeof err> | null {
   const expected = process.env.BOOKING_API_KEY
   if (!expected) return null  // gate is disabled
 
-  const provided = req.headers.get('x-api-key')
-  if (provided !== expected) {
+  const provided = req.headers.get('x-api-key') ?? ''
+  const a = Buffer.from(provided)
+  const b = Buffer.from(expected)
+  if (a.length !== b.length || !timingSafeEqual(a, b)) {
     return err('Invalid or missing API key', { status: 401 })
   }
   return null

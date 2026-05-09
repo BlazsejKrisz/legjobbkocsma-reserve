@@ -2,6 +2,7 @@ import { ok, err, safeJson, dbErr } from '@/lib/api/http'
 import { requireVenueAccess, requireSuperAdmin } from '@/lib/api/authz'
 import { createClient } from '@/lib/supabase/server'
 import { VenueSettingsSchema } from '@/lib/validators/venues'
+import { invalidate } from '@/lib/data/invalidate'
 
 type Params = { params: Promise<{ venueId: string }> }
 
@@ -43,6 +44,8 @@ export async function PUT(req: Request, { params }: Params) {
     .upsert({ venue_id: venueId, ...parsed.data }, { onConflict: 'venue_id' })
 
   if (error) return dbErr(error)
+
+  invalidate.venueSettings(venueId)
 
   return ok({ success: true })
 }

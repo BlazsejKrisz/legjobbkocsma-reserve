@@ -2,6 +2,7 @@ import { ok, err, safeJson, dbErr } from '@/lib/api/http'
 import { requireAuth, requireSuperAdmin } from '@/lib/api/authz'
 import { createAdminClient, createClient } from '@/lib/supabase/server'
 import { CreateVenueSchema } from '@/lib/validators/venues'
+import { invalidate } from '@/lib/data/invalidate'
 
 export async function GET() {
   const auth = await requireAuth()
@@ -42,6 +43,8 @@ export async function POST(req: Request) {
   })
 
   if (error) return dbErr(error, 'create_venue_with_setup')
+
+  invalidate.venues()
 
   return ok({ data }, { status: 201 })
 }

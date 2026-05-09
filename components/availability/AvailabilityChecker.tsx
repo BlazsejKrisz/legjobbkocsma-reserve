@@ -484,11 +484,11 @@ function EmptyState({
 }) {
   const toneClass =
     tone === 'warning'
-      ? 'border-amber-500/30 bg-amber-500/5'
+      ? 'border-warning/30 bg-warning/5'
       : 'border-border bg-muted/20'
   const iconClass =
     tone === 'warning'
-      ? 'text-amber-400'
+      ? 'text-warning'
       : 'text-muted-foreground'
 
   return (
@@ -520,8 +520,8 @@ function ResultGroup({
   currentVenueName: string
 }) {
   if (rows.length === 0) return null
-  const headerColor = tone === 'success' ? 'text-emerald-400' : 'text-muted-foreground'
-  const headerBg = tone === 'success' ? 'bg-emerald-500/10' : 'bg-muted/40'
+  const headerColor = tone === 'success' ? 'text-success' : 'text-muted-foreground'
+  const headerBg = tone === 'success' ? 'bg-success/10' : 'bg-muted/40'
 
   return (
     <div>
@@ -570,7 +570,7 @@ function ResultGroup({
               {/* Body */}
               <div className="flex flex-col gap-0.5 min-w-0 flex-1">
                 {isOtherVenue && (
-                  <span className="text-[10px] uppercase tracking-wider text-amber-400 flex items-center gap-1 font-semibold">
+                  <span className="text-[10px] uppercase tracking-wider text-warning flex items-center gap-1 font-semibold">
                     <MapPin className="h-2.5 w-2.5" />
                     {r.venue_name}
                   </span>
