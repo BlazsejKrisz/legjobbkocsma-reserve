@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useOverflowCount } from '@/lib/hooks/overflow/useOverflow'
 import { useVenues } from '@/lib/hooks/venues/useVenues'
 import {
@@ -23,6 +23,7 @@ import {
   MonitorDot,
   Send,
   Search,
+  LogOut,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { AppRole } from '@/lib/types/user'
@@ -415,6 +416,47 @@ export function SidebarContent({ role, initialOverflowCount, canSeeOverflow = fa
           </span>
         </div>
       </div>
+
+      {/* Mobile-only logout: the desktop topbar has its own logout
+          button, but on mobile the topbar gets crowded so we surface
+          the action here instead.  `onClose` is only passed when the
+          sidebar is rendered inside the mobile <Sheet>, so the
+          presence of that prop is the cleanest way to detect the
+          mobile context without threading another flag through. */}
+      {onClose && (
+        <div className="mx-3 mb-3 border-t border-border/60 pt-3">
+          <MobileLogoutItem onClose={onClose} />
+        </div>
+      )}
     </div>
+  )
+}
+
+// Mobile-menu logout: signs out via the supabase browser client and
+// pushes to /auth/login, mirroring the desktop topbar's LogoutButton
+// but rendered inside the mobile sheet so the topbar stays uncluttered.
+function MobileLogoutItem({ onClose }: { onClose: () => void }) {
+  const t = useT()
+  const router = useRouter()
+
+  const handleLogout = async () => {
+    const supabase = (await import('@/lib/supabase/client')).createClient()
+    await supabase.auth.signOut()
+    onClose()
+    router.push('/auth/login')
+  }
+
+  return (
+    <button
+      onClick={handleLogout}
+      className={cn(
+        'group relative flex w-full items-center gap-3 rounded-md',
+        'px-3 py-2 text-sm font-medium transition-colors duration-150',
+        'text-muted-foreground hover:text-destructive hover:bg-destructive/[0.08]',
+      )}
+    >
+      <LogOut className="h-[17px] w-[17px] shrink-0 transition-colors group-hover:text-destructive" strokeWidth={1.75} />
+      <span className="flex-1 truncate tracking-tight text-left">{t.common.logout}</span>
+    </button>
   )
 }

@@ -91,8 +91,13 @@ export default async function DashboardShell({
             <LanguageSwitcher />
             <div className="mx-1.5 h-4 w-px bg-border/60" />
             <ThemeToggle />
-            <div className="mx-1.5 h-4 w-px bg-border/60" />
-            <LogoutButton />
+            {/* Logout: desktop topbar only.  On mobile the topbar gets
+                crowded fast, so the logout moves into the mobile menu
+                (rendered at the bottom of SidebarContent). */}
+            <div className="mx-1.5 hidden h-4 w-px bg-border/60 lg:block" />
+            <div className="hidden lg:block">
+              <LogoutButton />
+            </div>
           </div>
         </header>
 
