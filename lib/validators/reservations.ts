@@ -80,5 +80,13 @@ export const PartnerReservationSchema = z.object({
     message: 'At least one of email or phone is required',
   }),
   message: z.string().max(2000).optional(),
+  // GDPR consent captured by the booking form.  Optional so non-embed
+  // integrations (WordPress, aggregators) aren't forced to send it; when
+  // present it is persisted with the reservation for accountability.
+  consents: z.object({
+    reservation_data_processing: z.boolean(),
+    reservation_data_processing_text: z.string().max(2000),
+    privacy_url: z.string().url().max(500).optional(),
+  }).optional(),
 })
 export type PartnerReservationPayload = z.infer<typeof PartnerReservationSchema>

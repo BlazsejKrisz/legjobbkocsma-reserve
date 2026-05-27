@@ -26,6 +26,16 @@ function corsHeaders(origin: string) {
   }
 }
 
+// dbErr() builds responses without CORS headers (it is shared with
+// same-origin authenticated endpoints).  On this cross-origin public
+// endpoint we must merge them in, otherwise a DB/business-rule rejection
+// (e.g. P0001 'booking too soon') reaches the browser as an opaque
+// CORS-blocked failure instead of a readable error body.
+function withCors(res: NextResponse, headers: Record<string, string>): NextResponse {
+  for (const [k, v] of Object.entries(headers)) res.headers.set(k, v)
+  return res
+}
+
 function getIp(req: Request): string {
   const fwd = (req as unknown as { headers: Headers }).headers.get('x-forwarded-for')
   return fwd?.split(',')[0]?.trim() ?? 'unknown'
@@ -227,7 +237,7 @@ export async function POST(req: Request) {
     p_email: payload.customer.email ?? null,
     p_phone: payload.customer.phone ?? null,
   })
-  if (customerErr) return dbErr(customerErr, 'get_or_create_customer')
+  if (customerErr) return withCors(dbErr(customerErr, 'get_or_create_customer'), CORS)
   const customerId = customer as number
 
   // Create reservation.
@@ -250,8 +260,24 @@ export async function POST(req: Request) {
     })
     .single()
 
-  if (rpcError) return dbErr(rpcError, 'create_reservation_auto')
+  if (rpcError) return withCors(dbErr(rpcError, 'create_reservation_auto'), CORS)
   const rpcResult = rpcRow as CreateReservationRpcResult
+
+  // Persist GDPR consent (best-effort — the reservation already exists, so a
+  // consent-write failure must not fail the booking; we log and move on).
+  if (rpcResult?.reservation_id && payload.consents) {
+    const { error: consentErr } = await supabase
+      .from('reservations')
+      .update({
+        consent_data_processing: payload.consents.reservation_data_processing,
+        consent_text: payload.consents.reservation_data_processing_text,
+        consent_privacy_url: payload.consents.privacy_url ?? null,
+        consent_at: new Date().toISOString(),
+        consent_ip: ip,
+      })
+      .eq('id', rpcResult.reservation_id)
+    if (consentErr) console.error('[public reservations] consent persist failed:', consentErr)
+  }
 
   if (payload.customer.email) {
     const kind: NotificationKind | null =

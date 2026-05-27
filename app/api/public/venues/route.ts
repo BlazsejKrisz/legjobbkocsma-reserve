@@ -30,14 +30,21 @@ export async function GET(req: Request) {
   const { data, error } = await supabase
     .from('venues')
     .select(`
-      id, name, slug,
+      id, name, slug, timezone,
       venue_settings (
         booking_enabled,
         min_notice_minutes,
         max_advance_booking_days,
         min_duration_minutes,
         max_duration_minutes,
+        default_duration_minutes,
         max_party_size
+      ),
+      venue_open_hours (
+        weekday,
+        is_closed,
+        open_time,
+        close_time
       )
     `)
     .eq('is_active', true)

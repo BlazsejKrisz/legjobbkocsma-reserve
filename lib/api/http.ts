@@ -41,6 +41,7 @@ const DB_STATUS: Record<string, number> = {
   "23503": 409,  // foreign_key_violation
   "23P01": 409,  // exclusion_violation (GiST overlap)
   "42501": 403,  // insufficient_privilege
+  P0001:   422,  // raise_exception — our own PL/pgSQL business-rule violations
 }
 
 // Generic, schema-leak-free messages for the codes we map.  Any code we
@@ -84,8 +85,13 @@ export function dbErr(error: DbError, ctx?: string): ReturnType<typeof err> {
     }),
   )
 
+  // P0001 = raise_exception from our own PL/pgSQL functions.  These messages
+  // are deliberate, controlled business-rule strings (e.g. 'booking too soon')
+  // — safe to surface so clients (embed widget, dashboard) can show/translate
+  // them, unlike raw Postgres errors which can leak schema internals.
   const message =
     DB_MESSAGE[error.code ?? ""] ??
-    (status >= 500 ? "Database error" : "Request failed")
+    (error.code === "P0001" ? error.message :
+      status >= 500 ? "Database error" : "Request failed")
   return err(message, { status })
 }

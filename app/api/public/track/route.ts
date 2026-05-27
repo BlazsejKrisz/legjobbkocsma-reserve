@@ -12,6 +12,9 @@ const ALLOWED_EVENTS = ['load', 'slots_loaded', 'slots_empty', 'submit', 'error'
 const ALLOWED_REASONS = [
   'party_size_exceeded',
   'booking_disabled',
+  'booking_too_soon',
+  'booking_too_far',
+  'too_many_requests',
   'venue_not_found',
   'invalid_payload',
   'unknown',
