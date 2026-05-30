@@ -23,10 +23,10 @@ import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
 import { StatusBadge } from './StatusBadge'
 import { useReservation, useReservationEvents } from '@/lib/hooks/reservations/useReservations'
-import { useUpdateReservation, useMarkConfirmationEmailSent, useRevertCancellation, useChangeTables, useMoveToOverflow } from '@/lib/hooks/reservations/useUpdateReservation'
+import { useUpdateReservation, useMarkConfirmationEmailSent, useRevertCancellation, useChangeTables, useMoveToOverflow, useDeleteReservation } from '@/lib/hooks/reservations/useUpdateReservation'
 import { useAvailableTables } from '@/lib/hooks/venues/useTables'
 import { useCheckAvailability } from '@/lib/hooks/availability/useAvailability'
-import { Search, AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react'
+import { Search, AlertTriangle, CheckCircle2, Loader2, Trash2 } from 'lucide-react'
 import { Checkbox } from '@/components/ui/checkbox'
 import type { AvailableTable } from '@/lib/types/venueGroup'
 import { formatTimeRange, formatDateYYYYMMDD, toLocalDateTimeInputs, fromLocalDateAndTimes } from '@/lib/datetime'
@@ -37,6 +37,9 @@ import { useT } from '@/lib/i18n/useT'
 type Props = {
   reservationId: string | null
   onClose: () => void
+  // Gates the hard-delete button.  Server still re-checks the role on DELETE,
+  // so a tampered client value just gets a 403.
+  isSuperAdmin?: boolean
 }
 
 function Field({ label, value }: { label: string; value: React.ReactNode }) {
@@ -463,16 +466,18 @@ function EditReservationDialog({
 
 // ─── Detail content ───────────────────────────────────────────────────────────
 
-function DetailContent({ reservation }: { reservation: Reservation }) {
+function DetailContent({ reservation, isSuperAdmin, onClose }: { reservation: Reservation; isSuperAdmin: boolean; onClose: () => void }) {
   const t = useT()
   const [notes, setNotes] = useState(reservation.internal_notes ?? '')
   const [editingNotes, setEditingNotes] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [changeTablesOpen, setChangeTablesOpen] = useState(false)
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const update = useUpdateReservation()
   const markEmailSent = useMarkConfirmationEmailSent()
   const revert = useRevertCancellation()
+  const deleteRes = useDeleteReservation()
 
   const customer = reservation.customers
   const timeRange = formatTimeRange(reservation.starts_at, reservation.ends_at)
@@ -483,6 +488,14 @@ function DetailContent({ reservation }: { reservation: Reservation }) {
       { id: reservation.id, status: 'cancelled' },
       { onSuccess: () => setCancelConfirmOpen(false) },
     )
+  }
+  const confirmDelete = () => {
+    deleteRes.mutate(reservation.id, {
+      onSuccess: () => {
+        setDeleteConfirmOpen(false)
+        onClose()
+      },
+    })
   }
 
   return (
@@ -515,6 +528,35 @@ function DetailContent({ reservation }: { reservation: Reservation }) {
               onClick={confirmCancellation}
             >
               {update.isPending ? t.detail.cancelling : t.detail.confirm_cancellation}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Hard-delete confirm — irreversible, super_admin only.  Cascades to
+          reservation_tables, events, and outbox rows.  Use cancel for normal
+          flow; this is for true cleanup. */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent className="max-w-[95vw] sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{t.detail.delete_title}</DialogTitle>
+            <DialogDescription>
+              {t.detail.delete_description.replace(
+                '{name}',
+                customer?.full_name ?? t.common.walk_in,
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setDeleteConfirmOpen(false)}>
+              {t.common.back}
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={deleteRes.isPending}
+              onClick={confirmDelete}
+            >
+              {deleteRes.isPending ? t.detail.deleting : t.detail.confirm_delete}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -749,6 +791,22 @@ function DetailContent({ reservation }: { reservation: Reservation }) {
             </Button>
           )}
         </div>
+
+        {/* Danger zone: hard delete — super_admin only, visually separated. */}
+        {isSuperAdmin && (
+          <div className="flex flex-wrap gap-2 pt-2 border-t border-destructive/20">
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/40"
+              disabled={deleteRes.isPending}
+              onClick={() => setDeleteConfirmOpen(true)}
+            >
+              <Trash2 className="h-3.5 w-3.5 mr-1" />
+              {t.detail.delete_action}
+            </Button>
+          </div>
+        )}
       </div>
 
       <Separator />
@@ -764,7 +822,7 @@ function DetailContent({ reservation }: { reservation: Reservation }) {
   )
 }
 
-export function ReservationDetail({ reservationId, onClose }: Props) {
+export function ReservationDetail({ reservationId, onClose, isSuperAdmin = false }: Props) {
   const t = useT()
   const { data, isLoading } = useReservation(reservationId)
   const reservation = data?.data
@@ -782,7 +840,13 @@ export function ReservationDetail({ reservationId, onClose }: Props) {
         {!isLoading && !reservation && (
           <div className="py-8 text-center text-sm text-muted-foreground">{t.common.not_found}</div>
         )}
-        {reservation && <DetailContent reservation={reservation} />}
+        {reservation && (
+          <DetailContent
+            reservation={reservation}
+            isSuperAdmin={isSuperAdmin}
+            onClose={onClose}
+          />
+        )}
       </SheetContent>
     </Sheet>
   )

@@ -3,7 +3,9 @@
 import { useCallback, useRef, useState } from 'react'
 import { format, subDays } from 'date-fns'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
@@ -23,6 +25,10 @@ export type ReservationFilterState = {
   dateTo: string
   search: string
   sortBy: 'created_at' | 'starts_at'
+  // Hide cancelled reservations by default — busy nights produce a lot of
+  // cancellations and they were drowning the active list.  Staff opts in
+  // explicitly when they need to see them.
+  showCancelled: boolean
 }
 
 type Props = {
@@ -95,6 +101,7 @@ export const DEFAULT_FILTERS: ReservationFilterState = {
   dateTo: '',
   search: '',
   sortBy: 'created_at',
+  showCancelled: false,
 }
 
 export function ReservationFilters({ filters, venues, onChange, onReset }: Props) {
@@ -104,7 +111,14 @@ export function ReservationFilters({ filters, venues, onChange, onReset }: Props
   const set = (patch: Partial<ReservationFilterState>) =>
     onChange({ ...filters, ...patch })
 
-  const hasActive = Object.values(filters).some(Boolean)
+  // `showCancelled` and `sortBy` are view-mode toggles, not narrowing filters
+  // — treating them as "active" makes the Reset-all button flicker in/out
+  // every time the user just changes the view, shifting the row layout.
+  // Only the real filter fields count here.
+  const hasActive = Boolean(
+    filters.venueId || filters.status || filters.source ||
+    filters.dateFrom || filters.dateTo || filters.search,
+  )
   const activePreset = activePresetId(filters.dateFrom, filters.dateTo)
   const hasDateFilter = filters.dateFrom || filters.dateTo
 
@@ -132,22 +146,27 @@ export function ReservationFilters({ filters, venues, onChange, onReset }: Props
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Tabs: sort mode */}
-      <div className="flex items-center gap-1 border-b border-border pb-2">
-        {(['created_at', 'starts_at'] as const).map((mode) => (
-          <button
-            key={mode}
-            onClick={() => set({ sortBy: mode, dateFrom: '', dateTo: '' })}
-            className={[
-              'px-3 py-1 text-xs font-medium rounded-md transition-colors',
-              filters.sortBy === mode
-                ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground hover:text-foreground hover:bg-muted',
-            ].join(' ')}
-          >
-            {mode === 'created_at' ? t.reservations_list.by_received : t.reservations_list.by_reservation}
-          </button>
-        ))}
+      {/* Sort-mode switch — segmented control, centered, content-width.
+          Bigger than the rest of the filter chrome on purpose: this is the
+          single most-touched toggle on the page and was previously easy to
+          miss tucked into the corner. */}
+      <div className="flex justify-center pb-1">
+        <div className="inline-flex items-center gap-1 rounded-lg bg-muted p-1">
+          {(['created_at', 'starts_at'] as const).map((mode) => (
+            <button
+              key={mode}
+              onClick={() => set({ sortBy: mode, dateFrom: '', dateTo: '' })}
+              className={[
+                'px-6 py-2 text-sm font-medium rounded-md transition-colors',
+                filters.sortBy === mode
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground',
+              ].join(' ')}
+            >
+              {mode === 'created_at' ? t.reservations_list.by_received : t.reservations_list.by_reservation}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Row 1: search + dropdowns */}
@@ -299,6 +318,28 @@ export function ReservationFilters({ filters, venues, onChange, onReset }: Props
                 : `${filters.dateFrom} → ${filters.dateTo}`}
             </span>
           )}
+        </div>
+      )}
+
+      {/* Show-cancelled toggle.  Centered on its own row so it doesn't share
+          space with "Reset all" (which appears/disappears and was shifting
+          the click target out from under the cursor).  Label is properly
+          associated via htmlFor so clicking the text toggles the box too. */}
+      {!filters.status && (
+        <div className="flex justify-center pt-1">
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="lk-show-cancelled"
+              checked={filters.showCancelled}
+              onCheckedChange={(v) => set({ showCancelled: v === true })}
+            />
+            <Label
+              htmlFor="lk-show-cancelled"
+              className="text-xs text-muted-foreground cursor-pointer select-none"
+            >
+              {t.filters.show_cancelled}
+            </Label>
+          </div>
         </div>
       )}
     </div>

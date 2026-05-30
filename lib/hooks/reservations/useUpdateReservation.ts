@@ -98,6 +98,27 @@ export function useRevertCancellation() {
   })
 }
 
+// Hard delete — super_admin only.  Removes the reservation row and everything
+// FK-cascading off it (tables, events, outbox).  Wraps a destructive call so
+// the UI can show a confirm dialog before firing.
+export function useDeleteReservation() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (reservationId: string) =>
+      apiFetch<{ success: boolean }>(`/api/reservations/${reservationId}`, {
+        method: 'DELETE',
+      }),
+    onSuccess: () => {
+      toast.success('Foglalás véglegesen törölve')
+      qc.invalidateQueries({ queryKey: qk.reservations.all() })
+      qc.invalidateQueries({ queryKey: qk.overflow.all() })
+    },
+    onError: (err) => {
+      toast.error('Sikertelen törlés', { description: err.message })
+    },
+  })
+}
+
 export function useChangeTables() {
   const qc = useQueryClient()
   return useMutation({

@@ -1,6 +1,6 @@
 import { after } from 'next/server'
 import { ok, err, safeJson, dbErr } from '@/lib/api/http'
-import { requireAuth, requireSupportOrAbove } from '@/lib/api/authz'
+import { requireAuth, requireSupportOrAbove, requireSuperAdmin } from '@/lib/api/authz'
 import { createAdminClient } from '@/lib/supabase/server'
 import { canAccessVenue } from '@/lib/auth/getSession'
 import { UpdateReservationSchema } from '@/lib/validators/reservations'
@@ -391,4 +391,25 @@ export async function POST(req: Request, { params }: Params) {
   }
 
   return err('Unknown action', { status: 400 })
+}
+
+// Hard delete — super_admin only.  FKs on reservation_tables, reservation_events,
+// notification_outbox and integration_outbox all cascade, so the row goes with
+// its full footprint (audit trail included).  Use cancel_reservation for
+// reversible removals; this endpoint exists for true cleanup (test data,
+// duplicates, GDPR erasure) without dropping into Supabase manually.
+export async function DELETE(_req: Request, { params }: Params) {
+  const auth = await requireSuperAdmin()
+  if (!auth.ok) return auth.response
+
+  const { reservationId } = await params
+  const supabase = createAdminClient()
+
+  const { error } = await supabase
+    .from('reservations')
+    .delete()
+    .eq('id', reservationId)
+
+  if (error) return dbErr(error, 'delete_reservation')
+  return ok({ success: true })
 }

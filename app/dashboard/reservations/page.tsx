@@ -45,6 +45,7 @@ export default async function ReservationsPage() {
       <ReservationsList
         venues={venues}
         tableTypes={tableTypes}
+        isSuperAdmin={session.isSuperAdmin}
       />
     </div>
   )

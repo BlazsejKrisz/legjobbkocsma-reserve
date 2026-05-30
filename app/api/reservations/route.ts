@@ -44,6 +44,7 @@ export async function GET(req: Request) {
   const dateFrom = url.searchParams.get('date_from') ?? undefined
   const dateTo = url.searchParams.get('date_to') ?? undefined
   const search = url.searchParams.get('search') ?? undefined
+  const hideCancelled = url.searchParams.get('hide_cancelled') === '1'
   const sortBy = url.searchParams.get('sort_by') === 'starts_at' ? 'starts_at' : 'created_at'
   const page = Math.max(1, Number(url.searchParams.get('page') ?? '1'))
   const pageSize = Math.min(Number(url.searchParams.get('page_size') ?? '50'), 100)
@@ -61,6 +62,9 @@ export async function GET(req: Request) {
   }
   if (venueId) query = query.eq('requested_venue_id', venueId)
   if (status) query = query.eq('status', status)
+  // Hide cancelled by default — only applies when no explicit status filter is
+  // set (otherwise we'd contradict the user's pick of "status = cancelled").
+  else if (hideCancelled) query = query.neq('status', 'cancelled')
   if (source) query = query.eq('source', source)
   if (dateFrom) query = query.gte(sortBy, dateFrom)
   if (dateTo) query = query.lte(sortBy, dateTo)

@@ -27,6 +27,7 @@ export default async function VenueReservationsPage({ params }: Params) {
         venues={[venue]}
         tableTypes={tableTypes}
         defaultVenueId={venueId}
+        isSuperAdmin={session.isSuperAdmin}
       />
     </div>
   )

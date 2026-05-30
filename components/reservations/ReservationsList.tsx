@@ -26,6 +26,10 @@ type Props = {
   venues: Venue[]
   tableTypes: TableType[]
   defaultVenueId?: string
+  // Super-admin-only affordances (currently: hard-delete on the detail drawer).
+  // Server reads getSession() and passes this flag down — never trust a
+  // client-side role check, the DELETE route re-verifies via requireSuperAdmin.
+  isSuperAdmin?: boolean
 }
 
 const PAGE_SIZE = 50
@@ -39,6 +43,7 @@ export function ReservationsList({
   venues,
   tableTypes,
   defaultVenueId,
+  isSuperAdmin = false,
 }: Props) {
   const t = useT()
   const [filters, setFilters] = useState<ReservationFilterState>({
@@ -57,6 +62,8 @@ export function ReservationsList({
     date_to:   filters.dateTo   ? dayWindowUTC(filters.dateTo).to   : undefined,
     search: filters.search || undefined,
     sort_by: filters.sortBy,
+    // hide cancelled by default; explicit status filter already narrows it
+    hide_cancelled: !filters.status && !filters.showCancelled,
     page,
     page_size: PAGE_SIZE,
   })
@@ -240,6 +247,7 @@ export function ReservationsList({
       <ReservationDetail
         reservationId={selectedId}
         onClose={() => setSelectedId(null)}
+        isSuperAdmin={isSuperAdmin}
       />
 
       {/* Create dialog */}
