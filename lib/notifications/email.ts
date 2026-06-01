@@ -50,6 +50,9 @@ export async function sendEmail(
       partySize: payload.partySize,
       reservationId: payload.reservationId,
       customerServiceNote: payload.customerServiceNote,
+      startsAt: payload.startsAt,
+      endsAt: payload.endsAt,
+      venueTimezone: payload.venue.timezone ?? undefined,
     }),
   )
 

@@ -34,6 +34,12 @@ export interface ReservationEmailProps {
   partySize: number
   reservationId: string | number
   customerServiceNote?: string
+  // Raw ISO timestamps + venue IANA timezone — used to build the "Add to
+  // Google Calendar" button.  Optional so old outbox rows (queued before
+  // these were added to the payload) still render without crashing.
+  startsAt?: string
+  endsAt?: string
+  venueTimezone?: string
 }
 
 // ─── Copy ──────────────────────────────────────────────────────────────────────
@@ -233,6 +239,30 @@ const styles = {
     marginBottom: '20px',
   } as React.CSSProperties,
 
+  gcalWrap: {
+    textAlign: 'center' as const,
+    margin: '0 0 22px',
+  } as React.CSSProperties,
+
+  gcalButton: {
+    display: 'inline-block',
+    backgroundColor: '#1a73e8',
+    color: '#ffffff',
+    textDecoration: 'none',
+    fontSize: '14px',
+    fontWeight: 600,
+    padding: '10px 20px',
+    borderRadius: '8px',
+    lineHeight: 1,
+  } as React.CSSProperties,
+
+  gcalHint: {
+    color: COLORS.inkFaint,
+    fontSize: '11px',
+    margin: '6px 0 0',
+    fontStyle: 'italic' as const,
+  } as React.CSSProperties,
+
   noteText: {
     color: COLORS.inkBody,
     fontSize: '13px',
@@ -269,6 +299,105 @@ const styles = {
     color: COLORS.inkFaint,
     textDecoration: 'none',
   } as React.CSSProperties,
+}
+
+// ─── Google Calendar URL ──────────────────────────────────────────────────────
+//
+// Google's calendar/render?action=TEMPLATE accepts dates as
+// "YYYYMMDDTHHMMSS/YYYYMMDDTHHMMSS" interpreted in the timezone given by
+// `ctz`.  We format the ISO timestamps as wall-clock time in the venue's
+// timezone (Europe/Budapest by default) so the event lands at the same
+// hour the guest sees in the email regardless of who's adding it.
+
+function formatLocalForGCal(isoUtc: string, tz: string): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: tz,
+    hour12: false,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+  }).formatToParts(new Date(isoUtc))
+  const o: Record<string, string> = {}
+  for (const p of parts) if (p.type !== 'literal') o[p.type] = p.value
+  // Some engines emit "24" for midnight — Google rejects it, normalise to "00".
+  if (o.hour === '24') o.hour = '00'
+  return `${o.year}${o.month}${o.day}T${o.hour}${o.minute}${o.second}`
+}
+
+// ─── Gmail Email Markup (schema.org JSON-LD) ─────────────────────────────────
+//
+// When Gmail finds a script[type="application/ld+json"] with a recognised
+// reservation type in the email head, it renders the rich card the user
+// asked for (the one with venue name, address, "Add to Calendar" and
+// "Directions" buttons) at the top of the conversation.  Other clients
+// (Outlook, Apple Mail) ignore the tag — they still see the in-body
+// fallback button.
+//
+// Spec: https://developers.google.com/gmail/markup/reference/food-establishment-reservation
+//
+// Only emit for `confirmed` and `updated`.  A `received` reservation is
+// still pending manual review (no firm time yet) so a calendar card would
+// be misleading; `cancelled` doesn't belong in a calendar.
+
+function buildReservationMarkup(args: {
+  type: EmailType
+  startsAt: string
+  endsAt: string
+  venue: VenueBranding
+  customerName: string
+  partySize: number
+  reservationId: string | number
+}): string | null {
+  if (args.type !== 'confirmed' && args.type !== 'updated') return null
+
+  const obj: Record<string, unknown> = {
+    '@context': 'http://schema.org',
+    '@type': 'FoodEstablishmentReservation',
+    reservationNumber: String(args.reservationId),
+    reservationStatus: 'http://schema.org/ReservationConfirmed',
+    underName: { '@type': 'Person', name: args.customerName },
+    reservationFor: {
+      '@type': 'FoodEstablishment',
+      name: args.venue.name,
+      ...(args.venue.address
+        ? { address: { '@type': 'PostalAddress', streetAddress: args.venue.address } }
+        : {}),
+      ...(args.venue.phone ? { telephone: args.venue.phone } : {}),
+      ...(args.venue.website ? { url: args.venue.website } : {}),
+    },
+    startTime: args.startsAt,
+    endTime: args.endsAt,
+    partySize: args.partySize,
+  }
+
+  // Escape `<` so a venue/customer name containing "</script>" can't break
+  // out of the script tag.  JSON.stringify handles quote/backslash escaping.
+  return JSON.stringify(obj).replace(/</g, '\\u003c')
+}
+
+function buildGoogleCalendarUrl(args: {
+  startsAt: string
+  endsAt: string
+  tz: string
+  venueName: string
+  venueAddress?: string | null
+  partySize: number
+  reservationId: string | number
+}): string {
+  const start = formatLocalForGCal(args.startsAt, args.tz)
+  const end   = formatLocalForGCal(args.endsAt, args.tz)
+  const location = args.venueAddress
+    ? `${args.venueName}, ${args.venueAddress}`
+    : args.venueName
+  const details = `Foglalás száma / Reservation #${args.reservationId}\nLétszám / Party size: ${args.partySize}`
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text:    `Foglalás — ${args.venueName}`,
+    dates:   `${start}/${end}`,
+    details,
+    location,
+    ctz:     args.tz,
+  })
+  return `https://calendar.google.com/calendar/render?${params.toString()}`
 }
 
 // ─── Building blocks ───────────────────────────────────────────────────────────
@@ -311,14 +440,53 @@ export function ReservationEmail(props: ReservationEmailProps) {
     partySize,
     reservationId,
     customerServiceNote,
+    startsAt,
+    endsAt,
+    venueTimezone,
   } = props
 
   const c = copy[type]
   const cancellationNumber = venue.phone ?? venue.emailContact ?? null
 
+  // Only confirmed/updated emails get the calendar button — "received" isn't
+  // a final time, and "cancelled" obviously shouldn't add anything.  Needs
+  // the raw ISO timestamps, which old outbox rows may lack.
+  const showCalendarExtras =
+    (type === 'confirmed' || type === 'updated') && !!startsAt && !!endsAt
+  const gcalUrl = showCalendarExtras
+    ? buildGoogleCalendarUrl({
+        startsAt: startsAt!,
+        endsAt:   endsAt!,
+        tz:       venueTimezone || 'Europe/Budapest',
+        venueName:    venue.name,
+        venueAddress: venue.address,
+        partySize,
+        reservationId,
+      })
+    : null
+  const reservationMarkup = showCalendarExtras
+    ? buildReservationMarkup({
+        type,
+        startsAt: startsAt!,
+        endsAt:   endsAt!,
+        venue,
+        customerName,
+        partySize,
+        reservationId,
+      })
+    : null
+
   return (
     <Html lang="hu">
-      <Head />
+      <Head>
+        {reservationMarkup && (
+          <script
+            type="application/ld+json"
+            // eslint-disable-next-line react/no-danger
+            dangerouslySetInnerHTML={{ __html: reservationMarkup }}
+          />
+        )}
+      </Head>
       <Preview>{c.huHeading} — {venue.name}</Preview>
       <Body style={styles.body}>
         <div style={styles.outer}>
@@ -381,6 +549,18 @@ export function ReservationEmail(props: ReservationEmailProps) {
                   />
                 </Section>
               </>
+            )}
+
+            {/* ─── Add to Google Calendar ─────────────────────────────── */}
+            {gcalUrl && (
+              <Section style={styles.gcalWrap}>
+                <Link href={gcalUrl} style={styles.gcalButton}>
+                  Hozzáadás Google Naptárhoz · Add to Google Calendar
+                </Link>
+                <Text style={styles.gcalHint}>
+                  A foglalás dátuma, időpontja és helyszíne automatikusan bekerül a naptárba.
+                </Text>
+              </Section>
             )}
 
             {/* ─── Customer-service note (reassignments) ─────────────── */}

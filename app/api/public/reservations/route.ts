@@ -178,7 +178,7 @@ export async function POST(req: Request) {
   const { data: venue, error: venueErr } = await supabase
     .from('venues')
     .select(`
-      id, name, logo_url, address, phone, website, email_contact,
+      id, name, logo_url, address, phone, website, email_contact, timezone,
       venue_settings (
         booking_enabled,
         default_duration_minutes,
@@ -303,6 +303,7 @@ export async function POST(req: Request) {
               phone: venue.phone ?? null,
               website: venue.website ?? null,
               emailContact: venue.email_contact ?? null,
+              timezone: (venue as { timezone?: string | null }).timezone ?? null,
             },
             startsAt: startsAt.toISOString(),
             endsAt: endsAt.toISOString(),

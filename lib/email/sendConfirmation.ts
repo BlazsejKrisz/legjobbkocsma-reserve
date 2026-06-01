@@ -47,6 +47,8 @@ export async function sendConfirmationEmail(data: ConfirmationEmailData): Promis
       partySize,
       reservationId,
       customerServiceNote,
+      startsAt,
+      endsAt,
     }),
   )
 
@@ -97,6 +99,8 @@ export async function sendReceivedEmail(data: ReceivedEmailData): Promise<boolea
       time,
       partySize,
       reservationId,
+      startsAt,
+      endsAt,
     }),
   )
 

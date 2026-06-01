@@ -21,8 +21,8 @@ export async function enqueueReservationNotification(
       .select(`
         id, starts_at, ends_at, party_size, notification_channel,
         customer:customer_id (full_name, email, phone),
-        venue:assigned_venue_id (name, logo_url, address, phone, website, email_contact),
-        requested_venue:requested_venue_id (name, logo_url, address, phone, website, email_contact)
+        venue:assigned_venue_id (name, logo_url, address, phone, website, email_contact, timezone),
+        requested_venue:requested_venue_id (name, logo_url, address, phone, website, email_contact, timezone)
       `)
       .eq('id', reservationId)
       .single()
@@ -51,6 +51,7 @@ export async function enqueueReservationNotification(
       phone: string | null
       website: string | null
       email_contact: string | null
+      timezone: string | null
     }
     const venue = ((data.venue ?? data.requested_venue) as unknown as VenueRow | null)
 
@@ -70,6 +71,7 @@ export async function enqueueReservationNotification(
           phone: venue?.phone ?? null,
           website: venue?.website ?? null,
           emailContact: venue?.email_contact ?? null,
+          timezone: venue?.timezone ?? null,
         },
         startsAt: data.starts_at as string,
         endsAt: data.ends_at as string,

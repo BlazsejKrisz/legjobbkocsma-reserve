@@ -31,6 +31,10 @@ export type NotificationPayload = {
     phone?: string | null
     website?: string | null
     emailContact?: string | null
+    // IANA timezone (e.g. 'Europe/Budapest') — used by the email template to
+    // build a correct Google Calendar link.  Optional for back-compat with
+    // older outbox rows that didn't carry it.
+    timezone?: string | null
   }
   startsAt: string  // ISO
   endsAt: string    // ISO
